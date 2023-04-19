@@ -251,3 +251,4 @@ log/
 results/
 .38epy/
 *.epy/
+.vscode/*
