@@ -1,4 +1,5 @@
 from functools import partial
+# from SMARTS.smarts.zoo import entry_point
 import pretrained
 from smac.env import MultiAgentEnv, StarCraft2Env
 import sys
@@ -9,13 +10,25 @@ from gym.envs import registry as gym_registry
 from gym.spaces import flatdim
 import numpy as np
 from gym.wrappers import TimeLimit as GymTimeLimit
+from gym.envs.registration import registry, register, make, spec
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).absolute().parents[0]))
+from SMARTS.smarts.zoo.agent_spec import AgentSpec
+from SMARTS.smarts.core.agent_interface import AgentInterface, AgentType, NeighborhoodVehicles
+
+from intersection_class import IntersectionEnv, reward_adapter, observation_adapter, info_adapter, action_adapter
+from intersection_class import LaneAgent  
 
 def env_fn(env, **kwargs) -> MultiAgentEnv:
     return env(**kwargs)
 
+register(id='IntersectionMerge-v0', 
+        entry_point='intersection_class:IntersectionEnv')
 
 REGISTRY = {}
 REGISTRY["sc2"] = partial(env_fn, env=StarCraft2Env)
+REGISTRY["smarts"] = partial(env_fn, env=IntersectionEnv)
 
 if sys.platform == "linux":
     os.environ.setdefault(
@@ -79,7 +92,9 @@ class FlattenObservation(ObservationWrapper):
 
 class _GymmaWrapper(MultiAgentEnv):
     def __init__(self, key, time_limit, pretrained_wrapper, seed, **kwargs):
-        self.original_env = gym.make(f"{key}", **kwargs)
+        self.agent_specs = self.agent_env_interface(**kwargs)
+
+        self.original_env = gym.make(f'{key}', agent_specs=self.agent_specs, **kwargs)
         self.episode_limit = time_limit
         self._env = TimeLimit(self.original_env, max_episode_steps=time_limit)
         self._env = FlattenObservation(self._env)
@@ -91,7 +106,7 @@ class _GymmaWrapper(MultiAgentEnv):
         self._obs = None
         self._info = None
 
-        self.longest_action_space = max(self._env.action_space, key=lambda x: x.n)
+        self.longest_action_space = max([self._env.action_space], key=lambda x: x.n)
         self.longest_observation_space = max(
             self._env.observation_space, key=lambda x: x.shape
         )
@@ -99,6 +114,28 @@ class _GymmaWrapper(MultiAgentEnv):
         self._seed = seed
         self._env.seed(self._seed)
 
+    def agent_env_interface(self,**kwargs):
+
+        args_interface = kwargs['agent_interface']
+        agent_ids = [f'Agent {i}' for i in range(1, kwargs['env_info']['n_agents']+1)]
+
+
+        if args_interface['agent_type'] == 'Laner':
+
+            req_type = AgentType.Laner
+        else: 
+            raise ValueError('Unknown Agent type requested')
+
+        _agent_interface = AgentInterface.from_type(requested_type=req_type,
+                                                    neighborhood_vehicle_states=NeighborhoodVehicles(radius=args_interface['neighbourhood_vehicle_radius']), 
+                                                    max_episode_steps=args_interface['max_episode_steps']) 
+
+        _agent_specs = AgentSpec(interface= _agent_interface, agent_builder=LaneAgent, reward_adapter=reward_adapter,
+                                observation_adapter=observation_adapter, action_adapter=action_adapter, info_adapter=info_adapter)
+
+        
+        agent_specs = {agent_id: _agent_specs for agent_id in agent_ids}
+        return agent_specs
     def step(self, actions):
         """ Returns reward, terminated, info """
         actions = [int(a) for a in actions]

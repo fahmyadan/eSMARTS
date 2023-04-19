@@ -1,0 +1,48 @@
+env: smarts
+
+env_args:
+  visdom: False # If True, enables Visdom display.
+  sumo_headless: False # If True, enables sumo-gui display.
+  scenarios: "intersections/4lane_merge"
+  headless: True
+  shuffle_scenarios: False
+
+agent_interface:
+  agent_type: Laner
+  neighbourhood_vehicle_radius: 1000
+  accelerometer: True 
+  max_episode_steps: 1000
+agent_spec:
+  agent_builder: LaneAgent
+  reward_adapter: reward_adapter
+  observation_adapter: observation_adapter
+env_info:
+  n_agents: 4
+  n_actions: 4
+  obs_shape: 56
+  episode_limit: 10000
+  name: intersection_merge
+
+
+
+  
+episode_limit: 10000
+
+
+test_greedy: True
+test_nepisode: 5
+test_interval: 500
+log_interval: 50
+runner_log_interval: 10
+learner_log_interval: 10
+t_max: 2050000
+
+# --- RL hyperparameters ---
+gamma: 0.99
+batch_size: 10 # Number of episodes to train on
+buffer_size: 32 # Size of the replay buffer
+lr: 0.0005 # Learning rate for agents
+optim_alpha: 0.99 # RMSProp alpha
+optim_eps: 0.00001 # RMSProp epsilon
+grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
+add_value_last_step: True

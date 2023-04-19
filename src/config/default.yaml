@@ -30,7 +30,7 @@ local_results_path: "results" # Path for local results
 # --- RL hyperparameters ---
 gamma: 0.99
 batch_size: 32 # Number of episodes to train on
-buffer_size: 32 # Size of the replay buffer
+buffer_size: 50 # Size of the replay buffer
 lr: 0.0005 # Learning rate for agents
 optim_alpha: 0.99 # RMSProp alpha
 optim_eps: 0.00001 # RMSProp epsilon

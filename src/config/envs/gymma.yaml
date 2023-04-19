@@ -4,6 +4,28 @@ env_args:
   key: null
   time_limit: 100
   pretrained_wrapper: null
+  visdom: False 
+  sumo_headless: False
+  sumo_port: 45761
+  scenarios: "intersections/4lane_merge"
+  headless: True
+  shuffle_scenarios: False
+  agent_interface:
+    agent_type: Laner
+    neighbourhood_vehicle_radius: 1000
+    accelerometer: True 
+    max_episode_steps: 1000
+  agent_spec:
+    agent_builder: LaneAgent
+    reward_adapter: reward_adapter
+    observation_adapter: observation_adapter
+  env_info:
+    n_agents: 4
+    n_actions: 4
+    obs_shape: 56
+    state_shape: 224 
+    episode_limit: 10000
+    name: intersection_merge
 
 test_greedy: True
 test_nepisode: 100
