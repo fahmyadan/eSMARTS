@@ -87,8 +87,8 @@ def run_sequential(args, logger):
     runner = r_REGISTRY[args.runner](args=args, logger=logger)
 
     # Set up schemes and groups here
-    # env_info = runner.get_env_info()
-    env_info = args.env_args['env_info']
+    env_info = runner.get_env_info()
+    # env_info = args.env_args['env_info']
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
