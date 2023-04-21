@@ -59,13 +59,17 @@ class EpisodeRunner:
                 "avail_actions": [self.env.get_avail_actions()],
                 "obs": [self.env.get_obs()]
             }
-
+            #Pretransition data: 
+            # state: [array(obs*n_agent,)]
+            #avail_actions: [[[avail_actions1], [avail_actions2]]]
+            #obs [[array(obs,), array(obs,)]]
+            #  
             self.batch.update(pre_transition_data, ts=self.t)
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-
+            #actions: tensor.size([1,n_agent]) -> where each element is action from 0-N-actions
             reward, terminated, env_info = self.env.step(actions[0])
             if test_mode and self.args.render:
                 self.env.render()
