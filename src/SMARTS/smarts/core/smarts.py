@@ -143,7 +143,7 @@ class SMARTS(ProviderManager):
         self._traffic_history_provider = TrafficHistoryProvider()
         self._trajectory_interpolation_provider = TrajectoryInterpolationProvider(self)
 
-        self._traffic_sims = [traffic_sims] or []
+        self._traffic_sims = traffic_sims or []
         self._traffic_sims.append(self._traffic_history_provider)
         if traffic_sim:
             warnings.warn(
