@@ -30,6 +30,14 @@ from SMARTS.smarts.env.custom_observations import lane_ttc_observation_adapter
 
 from SMARTS.risk_indices.risk_obs import risk_obs
 
+def flatten_list(lst):
+    result = []
+    for item in lst:
+        if isinstance(item, list):
+            result += flatten_list(item)
+        else:
+            result.append(item)
+    return result
 
 class LaneAgent(Agent): 
 
@@ -40,49 +48,68 @@ class LaneAgent(Agent):
         lane_actions = possible_actions[sampled_action]
         
         return lane_actions 
-cont_space = gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,))
-discrete_space = gym.spaces.Discrete(2)
-observation_space = [
-                cont_space,  # intersection distance
-                discrete_space,  # lane priority
-                cont_space,  # distance from centre
-                gym.spaces.Box(low=0, high=1000, shape=(3,)),  # ttc
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # linear velocity
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # linear acceleration
-                cont_space,  # heading
-                # neighbors
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # relative position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)),  # relative velocity
-                discrete_space,  # priority
-                cont_space,  # risk
-                cont_space,  # heading
-                # neighbor 2 
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # relative position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)),  # relative velocity
-                discrete_space,  # priority
-                cont_space,  # risk
-                cont_space,  # heading
 
-                # neighbor 3
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # relative position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)),  # relative velocity
-                discrete_space,  # priority
-                cont_space,  # risk
-                cont_space,  # heading
-                # neighbor 4 
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # relative position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)),  # relative velocity
-                discrete_space,  # priority
-                cont_space,  # risk
-                cont_space,  # heading
-                # Neighbor 5 
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)),  # relative position
-                gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)),  # relative velocity
-                discrete_space,  # priority
-                cont_space,  # risk
-                cont_space  # heading
-                ]
+#box vals=[ttc[0], ttc[1], ttc[2], egd[0], egd[1], egd[2], max_risk ...]
+box_low = [0.0, 0.0, 0.0,-1e10, -1e10,-1e10,0, -float('inf'), -float('inf'), -float('inf'), -float('inf'), -float('inf'), -float('inf'), -float('inf'), -float('inf')
+           ,-float('inf'),- float('inf'), -float('inf'), [-float('inf')] * 30 ]  
+box_high = [1000.0,1000.0,1000.0, 1e10, 1e10, 1e10,1,float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')
+           ,float('inf'),float('inf'), float('inf'), [float('inf')] * 30  ]  
+flatten_low, flatten_high = flatten_list(box_low), flatten_list(box_high)
+assert len(flatten_high) == len(flatten_low)
+box_shape = (len(flatten_low),)
+box_dtype = np.float32
+
+box_obs_space = gym.spaces.Box(low=np.array(flatten_low), high=np.array(flatten_high), shape=box_shape, dtype=box_dtype)
+
+priority_obs_space = gym.spaces.MultiDiscrete([2] * 6) # Discrete(2) for ego  + 5 neighbor prioirty 
+
+observation_space = (box_obs_space, priority_obs_space)
+
+# observation_space = [gym.spaces.Box(low=0, high=1000, shape=(3,)), #TTC
+#                      gym.spaces.Box(low=-1e10, high=1e10, shape=(3,)), #ego lane dist 
+#                      gym.spaces.Box(low=-0, high=1, shape=(1,)),#Max Risk 
+                     
+#                      
+#                      gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), #Position
+#                      gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), #Linear Velocity
+#                      gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), #Linear acceleration
+#                      gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)),#Heading 
+#                      #-------------Neighbor obs---------------------
+                     
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), # relative position
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)), #Reltive velocity
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)), #|RElative heading
+                    
+        
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), # relative position
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)), #Reltive velocity
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)), #|RElative heading
+            
+                    
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), # relative position
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)), #Reltive velocity
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)), #|RElative heading
+    
+                    
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), # relative position
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)), #Reltive velocity
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)), #|RElative heading
+
+                    
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(3,)), # relative position
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(2,)), #Reltive velocity
+#                     gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)), #|RElative heading
+
+                    # gym.spaces.Box(low=-float('inf'), high=float('inf'), shape=(1,)),# Intersection distance
+
+#                     # Pririoties
+#                     gym.spaces.Discrete(2),#ego Lane priority
+#                     gym.spaces.Discrete(2), #Priority N1
+#                     gym.spaces.Discrete(2), #Priority N2
+#                     gym.spaces.Discrete(2), #Priority N3
+#                     gym.spaces.Discrete(2), #Priority N4
+#                     gym.spaces.Discrete(2), #Priority N5 
+#                                     ]
 
 class IntersectionEnv(gym.Env):
     """A generic environment for various driving tasks simulated by SMARTS."""
