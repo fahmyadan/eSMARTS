@@ -58,8 +58,8 @@ class Logger:
 
 
 # set up a custom logger
-def get_logger():
-    logger = logging.getLogger()
+def get_logger(name:str):
+    logger = logging.getLogger(name)
     logger.handlers = []
     ch = logging.StreamHandler()
     formatter = logging.Formatter('[%(levelname)s %(asctime)s] %(name)s %(message)s', '%H:%M:%S')

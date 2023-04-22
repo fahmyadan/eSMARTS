@@ -15,7 +15,7 @@ import yaml
 from run import run
 
 SETTINGS['CAPTURE_MODE'] = "fd" # set to "no" if you want to see stdout/stderr in console
-logger = get_logger()
+logger = get_logger('SMARTS')
 
 ex = Experiment("pymarl")
 ex.logger = logger
