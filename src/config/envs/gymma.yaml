@@ -5,7 +5,7 @@ env_args:
   time_limit: 1000
   pretrained_wrapper: null
   visdom: False 
-  sumo_headless: False
+  sumo_headless: True
   sumo_port: 45761
   scenarios: "intersections/4lane_merge"
   headless: True

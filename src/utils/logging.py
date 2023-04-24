@@ -1,4 +1,5 @@
 from collections import defaultdict
+import sys
 import logging
 import numpy as np
 
@@ -59,6 +60,8 @@ class Logger:
 
 # set up a custom logger
 def get_logger(name:str):
+
+    print(sys.path)
     logger = logging.getLogger(name)
     logger.handlers = []
     ch = logging.StreamHandler()
@@ -67,5 +70,16 @@ def get_logger(name:str):
     logger.addHandler(ch)
     logger.setLevel('DEBUG')
 
+    class IgnoreSubmoduleFilter(logging.Filter):
+        def __init__(self, submodule_name):
+            self.submodule_name = submodule_name
+        
+        def filter(self, record):
+            return not record.name.startswith(self.submodule_name)
+
+    ignore_filter = IgnoreSubmoduleFilter(name)
+    logger.addFilter(ignore_filter)
+
+    
     return logger
 
