@@ -505,7 +505,6 @@ class SMARTS(ProviderManager):
         provider: Provider,
         recovery_flags: ProviderRecoveryFlags = ProviderRecoveryFlags.EXPERIMENT_REQUIRED,
     ):
-        print(f'check provider {provider}')
         assert isinstance(provider, Provider)
         
         provider.recovery_flags = recovery_flags

@@ -56,19 +56,18 @@ class Logger:
             log_str += "{:<25}{:>8}".format(k + ":", item)
             log_str += "\n" if i % 4 == 0 else "\t"
         self.console_logger.info(log_str)
+        print(f'-------------------------------------------------------STATS--------------------------------- \n {log_str} \n -------------------------------------')
 
 
 # set up a custom logger
 def get_logger(name:str):
-
-    print(sys.path)
     logger = logging.getLogger(name)
     logger.handlers = []
     ch = logging.StreamHandler()
     formatter = logging.Formatter('[%(levelname)s %(asctime)s] %(name)s %(message)s', '%H:%M:%S')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    logger.setLevel('DEBUG')
+    logger.setLevel('INFO')
 
     class IgnoreSubmoduleFilter(logging.Filter):
         def __init__(self, submodule_name):
