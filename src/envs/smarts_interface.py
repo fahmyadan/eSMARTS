@@ -154,7 +154,7 @@ class ObservationWrap(gym.ObservationWrapper):
                     agent_obs[all_id] = [cont_padding, [disc_padding]] 
 
 
-        obs_wrap = [(np.hstack(np.array(val[:-1])), np.hstack(val[-1]))  for val in agent_obs.values()]
+        obs_wrap = [(np.hstack(np.array(val[:-1], dtype=object)), np.hstack(val[-1]))  for val in agent_obs.values()]
         obs = np.array(obs_wrap)
 
         return obs
