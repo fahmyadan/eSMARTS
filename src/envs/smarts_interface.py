@@ -4,6 +4,7 @@ from pathlib import Path
 import gym 
 import numpy as np
 from smac import env
+from collections import namedtuple
 
 from SMARTS.envision.client import Client as Envision
 from SMARTS.smarts.core import agent, seed as smarts_seed
@@ -95,6 +96,7 @@ class ObservationWrap(gym.ObservationWrapper):
         self.env_info = kwargs['env_info']
         self.observation_space = [gym.spaces.Tuple(observation_space) for i in range(self.env_info['n_agents'])]
         self.state_size = self.env_info['state_shape']
+        self.traffic_state_encoder = TrafficStateEncoder()
 
     def observation(self, env_obs: Dict[str, Observation]) -> np.ndarray:
         global major_edges
@@ -102,6 +104,8 @@ class ObservationWrap(gym.ObservationWrapper):
         risk_dict = {key: risk_obs(val) for key, val in env_obs.items()}
 
         max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items()}
+
+        self.traffic_state_encoder.update(env_obs)
 
         agent_obs = {ids : [ttc_obs[ids]['ego_ttc'], ttc_obs[ids]['ego_lane_dist'] ,max_risk[ids]] for ids in env_obs.keys() }
         
@@ -272,4 +276,126 @@ class RewardWrapper(gym.RewardWrapper):
         # Temporary reward
         total_reward = sum(reward.values())
         return total_reward
+
+
+
+possible_states = ('merging', 'vio', 'compliant', 'intersection', 'dead') #namedtuple('TrafficState', '')
+
+TrafficState = namedtuple('TrafficState', possible_states)
+
+merge_length = 70
+
+agent_intent = {'Agent-1':['merge', 'west'], 'Agent-2': ['merge', 'east'],'Agent-3':['straight', 'south'], 'Agent-4':['straight', 'north']}
+
+agent_compliance = {'Agent-1': ['edge-west-WE_1', 'edge-north-SN_0'], 'Agent-2':['edge-east-EW_1', 'edge-south-NS_0'],
+                    'Agent-3': ['edge-south-SN_0', 'edge-north-SN_0'], 'Agent-4':['edge-north-NS_0', 'edge-south-NS_0']}
+
+agent_merge_lane = {'Agent-1': 'edge-west-WE_0', 'Agent-2': 'edge-east-EW_0' }
+
+junction_name = ':junction-intersection_11_1'
+
+
+class TrafficStateEncoder:
+    def __init__(self) -> None:
+        self.memory = []
+
+        pass
+    def __len__(self): 
+        return len(self.memory)
+
+    def push(self, traffic_state):
+
+        self.memory.append(traffic_state)
+
+    def update(self, env_obs:Dict[str,Observation]):
+        step_traffic_state = {}
+
+        #TODO: Think about intersection state for merge + straight
+        for ids in agent_intent.keys():
+
+            if ids not in env_obs.keys(): 
+                step_traffic_state[ids] = TrafficState(0,0,0,0,1)
+                # self.push(0,0,0,0,1) #agent is dead 
+            
+            else:
+                lane_id = env_obs[ids].ego_vehicle_state.lane_id
+                lane_idx = env_obs[ids].ego_vehicle_state.lane_index
+                lane_distance = env_obs[ids].ego_vehicle_state.lane_position.s
+
+                if 'junction' in lane_id:
+                    step_traffic_state[ids] = TrafficState(0,0,0,1,0)
+
+                if agent_intent[ids][0] == 'merge':
+
+                    if lane_id in agent_compliance[ids]: 
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0)
+                        # self.push(0,0,1,0,0) #compliant  
+                    elif lane_id in agent_merge_lane[ids]: #in merging lane 
+
+                        if lane_distance < merge_length: 
+                            step_traffic_state[ids] = TrafficState(1,0,0,0,0)
+                            # self.push(1,0,0,0,0)# in merging zone
+                        else: 
+                            step_traffic_state[ids] = TrafficState(0,1,0,0,0)
+                            # self.push(0,1,0,0,0) #violation zone
+                    else:
+                        step_traffic_state[ids] = TrafficState(0,1,0,0,0)
+                else: #agent_intent[ids] == 'straight'
+                    
+                    if lane_id in agent_compliance[ids]:  
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0)
+                        # self.push(0,0,1,0,0) #compliant
+
+                    elif lane_id not in agent_compliance[ids]:
+                        step_traffic_state[ids] = TrafficState(0,1,0,0,0)
+                        # self.push(0,1,0,0,0) #violation
+                    
+
+
+        for ids in agent_intent.keys():
+
+            if ids not in step_traffic_state:
+                step_traffic_state[ids] = self.check_missing(ids, env_obs.get(ids))
+
+        if len(step_traffic_state) != 4:
+            print('check')
+
+        self.push(step_traffic_state)
+
+    def check_missing(self, ids, obs): 
+
+        if obs is None: 
+
+            return TrafficState(0,0,0,0,1) #dead agent
+        else:
+            lane_id = obs.ego_vehicle_state.lane_id
+            lane_idx = obs.ego_vehicle_state.lane_index
+            lane_distance = obs.ego_vehicle_state.lane_position.s
+
+            if 'junction' in lane_id:
+                return TrafficState(0,0,0,1,0)
+            if agent_intent[ids][0] == 'merge':
+                if lane_id in agent_compliance[ids]: #compliant
+                    return TrafficState(0,0,1,0,0)
+                elif lane_id in agent_merge_lane[ids]: 
+                    if lane_distance < merge_length:
+                        return TrafficState(1,0,0,0,0) #merge zone
+                    else:
+                        return TrafficState(0,1,0,0,0) #violation zone
+                else:
+                    return TrafficState(0,1,0,0,0) 
+            elif agent_intent[ids][0] == 'straight':
+                if lane_id in agent_compliance[ids]:
+                    return TrafficState(0,0,1,0,0)
+                elif lane_id not in agent_compliance[ids]:
+                    return TrafficState(0,1,0,0,0) 
+                else:
+                    return TrafficState(0,0,0,1,0)
+
+
+
+                
+
+        
+
 
