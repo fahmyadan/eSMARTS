@@ -112,8 +112,9 @@ class _GymmaWrapper(MultiAgentEnv):
                             'agent_interfaces': agent_interface}
             self.original_env = gym.make(f'{key}', **smarts_args)
             self.original_env = ObservationWrap(self.original_env, **kwargs)
+            self.traffic_state_encoder = self.original_env.traffic_state_encoder
             self.original_env = ActionWrap(self.original_env, **kwargs)
-            self.original_env = RewardWrapper(self.original_env)
+            self.original_env = RewardWrapper(self.original_env, self.traffic_state_encoder)
         else:
             self.original_env = gym.make(f"{key}", **kwargs)
         self.episode_limit = time_limit
@@ -183,19 +184,52 @@ class _GymmaWrapper(MultiAgentEnv):
         return self.n_agents * flatdim(self.longest_observation_space)
 
     def get_avail_actions(self):
+        #Find exact action string 
+        # action_map = {
+        # 0: 'keep_lane', 
+        # 1: 'slow_down', 
+        # 2: 'change_lane_left',
+        # 3: 'change_lane_right' 
+        # }
         avail_actions = []
+        state_encoder_list_t = list(self.traffic_state_encoder.memory[-1].values())
         for agent_id in range(self.n_agents):
-            avail_agent = self.get_avail_agent_actions(agent_id)
+            agent_traffic_state = state_encoder_list_t[agent_id]
+            avail_agent = self.get_avail_agent_actions(agent_id, agent_traffic_state)
             avail_actions.append(avail_agent)
         return avail_actions
 
-    def get_avail_agent_actions(self, agent_id):
+    def get_avail_agent_actions(self, agent_id, traffic_state):
         """ Returns the available actions for agent_id
         action_space: Tuple(Discrete(n) * N_agents) -> longest act space Discrete(n)
          """
-        valid = flatdim(self._env.action_space[agent_id]) * [1]
+        valid = flatdim(self._env.action_space[agent_id]) * [1] 
+
+        #if no condition is triggered (intersection) all actions are available
+        if traffic_state.merging == 1:
+            valid[-1] = 0  #change right is invalid  
+
+        elif traffic_state.vio == 1: 
+            valid[0] = 0 # keep_lane invalid
+            valid[-1] = 0 #change_right invalid 
+
+        elif traffic_state.compliant == 1 :
+            valid[-1] = 0 #change right is invalid
+            valid[-2] = 0# change left invalid
+        
+        elif traffic_state.dead == 1: 
+            valid[1] = 0
+            valid[2] = 0
+            valid[3] = 0 
+
+        elif traffic_state.intersection == 1: 
+            invalid = [0] * (self.longest_action_space.n - len(valid))
+            return valid + invalid
+        
+
         invalid = [0] * (self.longest_action_space.n - len(valid))
         return valid + invalid
+
 
     def get_total_actions(self):
         """ Returns the total number of actions an agent could ever take """
