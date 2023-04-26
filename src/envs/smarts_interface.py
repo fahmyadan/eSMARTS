@@ -256,9 +256,9 @@ def _discrete(agent_ids) -> Tuple[Callable[[int], np.ndarray], gym.Space]:
 
 class RewardWrapper(gym.RewardWrapper):
 
-    def __init__(self, env):
+    def __init__(self, env, traffic_state_encoder):
         super().__init__(env)
-
+        self.traffic_state_encoder = traffic_state_encoder
         self.env = env
     
     def reset(self, **kwargs):
@@ -309,8 +309,8 @@ class TrafficStateEncoder:
 
     def update(self, env_obs:Dict[str,Observation]):
         step_traffic_state = {}
-
-        #TODO: Think about intersection state for merge + straight
+        #TODO: Add collision state (len(collisions) for each agent; different from dead)
+        #TODO: Review State encoder for bugs
         for ids in agent_intent.keys():
 
             if ids not in env_obs.keys(): 
@@ -338,9 +338,8 @@ class TrafficStateEncoder:
                         else: 
                             step_traffic_state[ids] = TrafficState(0,1,0,0,0)
                             # self.push(0,1,0,0,0) #violation zone
-                    else:
-                        step_traffic_state[ids] = TrafficState(0,1,0,0,0)
-                else: #agent_intent[ids] == 'straight'
+
+                elif agent_intent[ids] == 'straight':
                     
                     if lane_id in agent_compliance[ids]:  
                         step_traffic_state[ids] = TrafficState(0,0,1,0,0)
@@ -349,6 +348,8 @@ class TrafficStateEncoder:
                     elif lane_id not in agent_compliance[ids]:
                         step_traffic_state[ids] = TrafficState(0,1,0,0,0)
                         # self.push(0,1,0,0,0) #violation
+                else:
+                    step_traffic_state[ids] = TrafficState(0,1,0,0,0)
                     
 
 
