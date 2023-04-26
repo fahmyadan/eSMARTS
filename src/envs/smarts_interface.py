@@ -97,18 +97,20 @@ class ObservationWrap(gym.ObservationWrapper):
         self.observation_space = [gym.spaces.Tuple(observation_space) for i in range(self.env_info['n_agents'])]
         self.state_size = self.env_info['state_shape']
         self.traffic_state_encoder = TrafficStateEncoder()
+        self.max_risk = None
+        self.ttc_obs = None  
 
     def observation(self, env_obs: Dict[str, Observation]) -> np.ndarray:
         global major_edges
-        ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in env_obs.items()}
+        self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in env_obs.items()}
         risk_dict = {key: risk_obs(val) for key, val in env_obs.items()}
 
-        max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items()}
+        self.max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items()}
 
 
         self.traffic_state_encoder.update(env_obs)
 
-        agent_obs = {ids : [ttc_obs[ids]['ego_ttc'], ttc_obs[ids]['ego_lane_dist'] ,max_risk[ids]] for ids in env_obs.keys() }
+        agent_obs = {ids : [self.ttc_obs[ids]['ego_ttc'],self.ttc_obs[ids]['ego_lane_dist'] ,self.max_risk[ids]] for ids in env_obs.keys() }
         
         # Distance along the lane: 130m for major, 70m for minor
         # Check for major/minor road
@@ -260,8 +262,9 @@ class RewardWrapper(gym.RewardWrapper):
     def __init__(self, env, traffic_state_encoder):
         super().__init__(env)
         self.traffic_state_encoder = traffic_state_encoder
-
+    
         self.env = env
+        self.max_risk = self.env.max_risk
     
     def reset(self, **kwargs):
 
@@ -275,16 +278,24 @@ class RewardWrapper(gym.RewardWrapper):
     def reward(self, reward):
         # TODO: Calculate Reward for collision, crossing + merging
         latest_traffic_states = self.traffic_state_encoder.memory[-1]
-
+        max_rss = self.env.max_risk
+        ttc = self.env.ttc_obs
+        total_reward = {}
         compliance_reward = self.compliance_reward(latest_traffic_states)
         collision_reward = self.collision_reward(latest_traffic_states)
         violation_reward = self.violation_reward(latest_traffic_states)
         merging_reward = self.merging_zone_reward(latest_traffic_states)
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
+        safety_reward = self.safety_reward(max_rss, ttc)
+
+        for keys in compliance_reward.keys():
+            total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
+
+
 
         # Temporary reward
-        total_reward = sum(reward.values())
-        return total_reward
+        total_rewards = sum(total_reward.values())
+        return total_rewards
     
     def compliance_reward(self, state_enc):
         compliance_rewards = {}
@@ -308,26 +319,80 @@ class RewardWrapper(gym.RewardWrapper):
         return violation_reward
 
     def merging_zone_reward(self, state_enc):
-        pass
+        merge_reward = {}
+
+        for key, val in state_enc.items():
+            if val.merging == 1: 
+
+                merge_reward[key] = merge_parabola(val.lane_distance)
+            else: 
+                merge_reward[key] = 0
+
+        return merge_reward
 
     def intersection_goal_reward(self, state_enc):
         #reward for reaching destination
+        intersection_reward = {}
+
+        for key, val in state_enc.items():
+            reward = 0
+            if val.reached_goal: 
+                reward+= 10
+        
         #reward for progress through intersection 
-        pass
+            if val.intersection == 1: 
+                reward+= val.lane_distance
+            
+            intersection_reward[key] = reward
+
+        return intersection_reward
 
     def collision_reward(self, state_enc):
-        pass
+        collision_reward = {}
+        for key, val in state_enc.items():
+            if val.collided == 1:
+                collision_reward[key] = -10
+            else:
+                collision_reward[key] = 0 
+        return collision_reward
 
     def safety_reward(self, rss, ttc):
-        pass
+        rss_t = 0.8
+        ttc_t = 5
+        safety_reward = {}
+        for keys in agent_intent.keys():
+            assert rss.keys() == ttc.keys()
+            if keys not in rss.keys():
+                safety_reward[keys] = 0 #agent not in sim 
+            elif rss[keys] <= rss_t and ttc[keys]['ego_ttc'][1] >=ttc_t: #safe situation (current lane ttc[1])
+                safety_reward[keys] = +1           
+            elif ttc[keys]['ego_ttc'][1]< ttc_t: #unsafe ttc 
+                safety_reward[keys] = -1 
+            elif rss[keys] > rss_t: 
+                safety_reward[keys] = -0.5
+            else:
+                safety_reward[keys] = -0.1
+
+        return safety_reward 
+
+
+merge_length = 70
+ 
+def merge_parabola(s, a=0.5):
+
+    r = ((-4/merge_length**2) * (s - (0.5*merge_length))**2) + 1
+
+    return r 
 
 
 
-possible_states = ('merging', 'vio', 'compliant', 'intersection', 'dead', 'collided') #namedtuple('TrafficState', '')
+
+
+possible_states = ('merging', 'vio', 'compliant', 'intersection', 'dead', 'collided', 'lane_distance', 'reached_goal') #namedtuple('TrafficState', '')
 
 TrafficState = namedtuple('TrafficState', possible_states)
 
-merge_length = 70
+
 
 agent_intent = {'Agent-1':['merge', 'west'], 'Agent-2': ['merge', 'east'],'Agent-3':['straight', 'south'], 'Agent-4':['straight', 'north']}
 
@@ -358,42 +423,45 @@ class TrafficStateEncoder:
         for ids in agent_intent.keys():
 
             if ids not in env_obs.keys(): 
-                step_traffic_state[ids] = TrafficState(0,0,0,0,1,0)
+                step_traffic_state[ids] = TrafficState(0,0,0,0,1,0, None, False)
 
             elif len(env_obs[ids].events.collisions) > 0: # agent has collided
-                step_traffic_state[ids] = TrafficState(0,0,0,0,0,1)
+                lane_distance = env_obs[ids].ego_vehicle_state.lane_position.s
+                reached_goal = env_obs[ids].events.reached_goal
+                step_traffic_state[ids] = TrafficState(0,0,0,0,0,1, lane_distance, reached_goal)
             
             else:
                 lane_id = env_obs[ids].ego_vehicle_state.lane_id
                 lane_idx = env_obs[ids].ego_vehicle_state.lane_index
                 lane_distance = env_obs[ids].ego_vehicle_state.lane_position.s
+                reached_goal = env_obs[ids].events.reached_goal
 
                 if 'junction' in lane_id:
-                    step_traffic_state[ids] = TrafficState(0,0,0,1,0,0)
+                    step_traffic_state[ids] = TrafficState(0,0,0,1,0,0, lane_distance, reached_goal)
                     
 
                 if agent_intent[ids][0] == 'merge':
 
                     if lane_id in agent_compliance[ids]: 
-                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0)
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal)
                         # self.push(0,0,1,0,0) #compliant  
                     elif lane_id in agent_merge_lane[ids]: #in merging lane 
 
                         if lane_distance < merge_length: 
-                            step_traffic_state[ids] = TrafficState(1,0,0,0,0,0)
+                            step_traffic_state[ids] = TrafficState(1,0,0,0,0,0, lane_distance,reached_goal)
                             # self.push(1,0,0,0,0)# in merging zone
                         else: 
-                            step_traffic_state[ids] = TrafficState(0,1,0,0,0,0)
+                            step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal)
                             # self.push(0,1,0,0,0) #violation zone
 
                 elif agent_intent[ids] == 'straight':
                     
                     if lane_id in agent_compliance[ids]:  
-                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0)
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal)
                         # self.push(0,0,1,0,0) #compliant
 
                     else:
-                        step_traffic_state[ids] = TrafficState(0,1,0,0,0,0)
+                        step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal)
                         # self.push(0,1,0,0,0) #violation
                 # else:
                 #     step_traffic_state[ids] = TrafficState(0,1,0,0,0,0)
@@ -414,31 +482,36 @@ class TrafficStateEncoder:
 
         if obs is None: 
 
-            return TrafficState(0,0,0,0,1,0) #dead agent
+            return TrafficState(0,0,0,0,1,0,None, False) #dead agent
+        elif len(obs.events.collisions) >0:
+            lane_distance = obs.ego_vehicle_state.lane_position.s
+            reached_goal = obs.events.reached_goal
+            return TrafficState(0,0,0,0,0,1, lane_distance,reached_goal)
         else:
             lane_id = obs.ego_vehicle_state.lane_id
             lane_idx = obs.ego_vehicle_state.lane_index
             lane_distance = obs.ego_vehicle_state.lane_position.s
+            reached_goal = obs.events.reached_goal
 
             if 'junction' in lane_id:
-                return TrafficState(0,0,0,1,0,0)
+                return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal)
             if agent_intent[ids][0] == 'merge':
                 if lane_id in agent_compliance[ids]: #compliant
-                    return TrafficState(0,0,1,0,0,0)
+                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal)
                 elif lane_id in agent_merge_lane[ids]: 
                     if lane_distance < merge_length:
-                        return TrafficState(1,0,0,0,0,0) #merge zone
+                        return TrafficState(1,0,0,0,0,0, lane_distance,reached_goal)#merge zone
                     else:
-                        return TrafficState(0,1,0,0,0,0) #violation zone
+                        return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal) #violation zone
                 else:
-                    return TrafficState(0,1,0,0,0,0) 
+                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal) 
             elif agent_intent[ids][0] == 'straight':
                 if lane_id in agent_compliance[ids]:
-                    return TrafficState(0,0,1,0,0,0)
+                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal)
                 elif lane_id not in agent_compliance[ids]:
-                    return TrafficState(0,1,0,0,0,0) 
+                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal) 
                 else:
-                    return TrafficState(0,0,0,1,0,0)
+                    return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal)
 
 
 
