@@ -26,6 +26,7 @@ from intersection_class import observation_space
 from SMARTS.smarts.env.custom_observations import lane_ttc_observation_adapter
 
 from SMARTS.risk_indices.risk_obs import risk_obs
+from src.SMARTS.smarts.core.observations import EgoVehicleObservation
 
 class SmartsInterface:
     def __init__(self, **kwargs) -> None:
@@ -256,6 +257,118 @@ def _discrete(agent_ids) -> Tuple[Callable[[int], np.ndarray], gym.Space]:
 
     return wrapper, space
 
+# eval_metrics = ('avg_veh_delay', 'avg_edge_delay', 'edge_tt', 'n_stops', 'queue')
+
+# Eval = namedtuple('Eval', eval_metrics)
+
+class InfoWrapper(gym.Wrapper):
+    def __init__(self, env: gym.Env, **kwargs):
+        self.args = kwargs
+        super().__init__(env)
+   
+    def reset(self, **kwargs):
+
+        self._obs = super().reset(**kwargs)
+        return self._obs 
+    def step(self, action):
+        self._obs, _reward, done, self.info = super().step(action)
+        
+        self.traci_conn = self.env.traci_conn
+        self.edges = self.traci_conn.edge.getIDList()[-8:]
+        self.vehs = self.traci_conn.vehicle.getIDList()
+        avg_delay = self.get_avg_veh_waiting_time()
+        avg_edge_delay = self.get_avg_edge_waiting_time()
+        edge_tt = self.get_avg_edge_travel_time()
+        n_stops = self.get_stopped_vehs()
+        queue = self.get_queue()
+
+        self.info = {'avg_delay':avg_delay, 'avg_edge_delay':avg_edge_delay,
+                'edge_tt':edge_tt, 'edge_stops':n_stops, 'queue_ledngth': queue}
+        
+        return self._obs, _reward, done, self.info
+        
+
+    def get_avg_veh_waiting_time(self):
+
+        traci = self.traci_conn
+        N_vehs = len(self.vehs)
+        acc_wait = np.zeros(N_vehs)
+
+        for i, ids in enumerate(self.vehs):
+            wait = traci.vehicle.getAccumulatedWaitingTime(ids)
+            acc_wait[i] = wait
+
+        return np.mean(acc_wait) 
+    
+    def get_avg_edge_waiting_time(self):
+
+        traci = self.traci_conn
+        major_ids = ['west', 'east']
+        edge_delay = {'major':[], 'minor':[]}
+
+        for ids in self.edges:
+            if major_ids[0] in ids:
+                edge_delay['major'].append(traci.edge.getWaitingTime(ids))
+            elif major_ids[1] in ids:
+                edge_delay['major'].append(traci.edge.getWaitingTime(ids))
+
+            else:
+                edge_delay['minor'].append(traci.edge.getWaitingTime(ids))
+
+        return edge_delay
+   
+    def get_avg_edge_travel_time(self):
+
+        traci = self.traci_conn
+        major_ids = ['west', 'east']
+        edge_tt = {'major':[], 'minor':[]}
+
+        for ids in self.edges:
+            if major_ids[0] in ids:
+                edge_tt['major'].append(traci.edge.getTraveltime(ids))
+            elif major_ids[1] in ids:
+                edge_tt['major'].append(traci.edge.getTraveltime(ids))
+            else:
+                edge_tt['minor'].append(traci.edge.getTraveltime(ids))
+
+        return edge_tt
+
+    def get_stopped_vehs(self):
+
+        traci = self.traci_conn
+        major_ids = ['west', 'east']
+        edge_stops = {'major':[], 'minor':[]}
+
+        for ids in self.edges:
+            if major_ids[0] in ids:
+                edge_stops['major'].append(traci.edge.getLastStepHaltingNumber(ids))
+            elif major_ids[1] in ids:
+                edge_stops['major'].append(traci.edge.getLastStepHaltingNumber(ids))
+            else:
+                edge_stops['minor'].append(traci.edge.getLastStepHaltingNumber(ids))
+
+
+        return edge_stops
+
+    def get_queue(self):
+
+        traci = self.traci_conn
+        major_ids = ['west', 'east']
+        queues = {'major':[], 'minor':[]}
+
+        for ids in self.edges:
+            if major_ids[0] in ids:
+                queues['major'].append(traci.edge.getLastStepVehicleNumber(ids))
+            elif major_ids[1] in ids:
+                queues['major'].append(traci.edge.getLastStepVehicleNumber(ids))
+            else:
+                queues['minor'].append(traci.edge.getLastStepVehicleNumber(ids))
+        
+        return queues
+
+
+
+
 
 class RewardWrapper(gym.RewardWrapper):
 
@@ -273,6 +386,7 @@ class RewardWrapper(gym.RewardWrapper):
     
     def step(self, action):
         self._obs, _reward, done, info = super().step(action)
+
         done = done['__all__']
         return self._obs, _reward, done, info
     def reward(self, reward):

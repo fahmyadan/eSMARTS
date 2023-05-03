@@ -22,7 +22,7 @@ from SMARTS.smarts.env.hiway_env import HiWayEnv
 
 from intersection_class import IntersectionEnv, reward_adapter, observation_adapter, info_adapter, action_adapter
 from intersection_class import LaneAgent  
-from smarts_interface import SmartsInterface, ObservationWrap, ActionWrap, RewardWrapper
+from smarts_interface import SmartsInterface, ObservationWrap, ActionWrap, RewardWrapper, InfoWrapper
 
 def env_fn(env, **kwargs) -> MultiAgentEnv:
     return env(**kwargs)
@@ -108,13 +108,15 @@ class _GymmaWrapper(MultiAgentEnv):
             agent_interface = smarts_interface.get_agent_interface()
             agent_specs = smarts_interface.get_agent_spec()
             smarts_args = {'scenarios': scenarios, 'sumo_headless': kwargs['sumo_headless'],
-                            'headless': kwargs['headless'],
+                            'headless': kwargs['headless'], 'num_external_sumo_clients': kwargs['num_external_sumo_clients'],
+                            'sumo_port': kwargs['sumo_port'],
                             'agent_interfaces': agent_interface}
             self.original_env = gym.make(f'{key}', **smarts_args)
             self.original_env = ObservationWrap(self.original_env, **kwargs)
             self.traffic_state_encoder = self.original_env.traffic_state_encoder
             self.original_env = ActionWrap(self.original_env, **kwargs)
             self.original_env = RewardWrapper(self.original_env, self.traffic_state_encoder)
+            self.original_env = InfoWrapper(self.original_env, **kwargs)
         else:
             self.original_env = gym.make(f"{key}", **kwargs)
         self.episode_limit = time_limit
@@ -160,7 +162,7 @@ class _GymmaWrapper(MultiAgentEnv):
             reward = sum(reward)
         if type(done) is list:
             done = all(done)
-        return float(reward), done, {}
+        return float(reward), done, self._info
 
     def get_obs(self):
         """ Returns all agent observations in a list """
