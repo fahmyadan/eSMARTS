@@ -267,7 +267,6 @@ class InfoWrapper(gym.Wrapper):
         super().__init__(env)
    
     def reset(self, **kwargs):
-
         self._obs = super().reset(**kwargs)
         return self._obs 
     def step(self, action):
@@ -277,16 +276,18 @@ class InfoWrapper(gym.Wrapper):
         self.edges = self.traci_conn.edge.getIDList()[-8:]
         self.vehs = self.traci_conn.vehicle.getIDList()
         avg_delay = self.get_avg_veh_waiting_time()
+        avg_speed = self.get_avg_veh_speed()
         avg_edge_delay = self.get_avg_edge_waiting_time()
         edge_tt = self.get_avg_edge_travel_time()
         n_stops = self.get_stopped_vehs()
         queue = self.get_queue()
+        flow = self.get_flow() 
 
-        self.info = {'avg_delay':avg_delay, 'avg_edge_delay':avg_edge_delay,
-                'edge_tt':edge_tt, 'edge_stops':n_stops, 'queue_ledngth': queue}
+        self.info = {'avg_delay':avg_delay, 'avg_speed':avg_speed, 'avg_edge_delay':avg_edge_delay,
+                'med_edge_tt':edge_tt, 'total_stops':n_stops, 'avg_queue_length': queue, 'avg_flow': flow}
         
         return self._obs, _reward, done, self.info
-        
+
 
     def get_avg_veh_waiting_time(self):
 
@@ -299,6 +300,17 @@ class InfoWrapper(gym.Wrapper):
             acc_wait[i] = wait
 
         return np.mean(acc_wait) 
+    def get_avg_veh_speed(self):
+
+        traci = self.traci_conn
+        N_vehs = len(self.vehs)
+        all_speed = np.zeros(N_vehs)
+
+        for i, ids in enumerate(self.vehs):
+            speed = traci.vehicle.getSpeed(ids)
+            all_speed[i] = speed
+
+        return np.mean(all_speed)
     
     def get_avg_edge_waiting_time(self):
 
@@ -315,7 +327,12 @@ class InfoWrapper(gym.Wrapper):
             else:
                 edge_delay['minor'].append(traci.edge.getWaitingTime(ids))
 
-        return edge_delay
+        total_avg_delay = 0
+        for vals in edge_delay.values():
+
+            total_avg_delay+=sum(vals)
+        
+        return total_avg_delay 
    
     def get_avg_edge_travel_time(self):
 
@@ -330,8 +347,11 @@ class InfoWrapper(gym.Wrapper):
                 edge_tt['major'].append(traci.edge.getTraveltime(ids))
             else:
                 edge_tt['minor'].append(traci.edge.getTraveltime(ids))
+        tt_list = np.array([val for sublist in edge_tt.values() for val in sublist])
 
-        return edge_tt
+        median_tt = np.median(tt_list)
+
+        return median_tt
 
     def get_stopped_vehs(self):
 
@@ -347,9 +367,30 @@ class InfoWrapper(gym.Wrapper):
             else:
                 edge_stops['minor'].append(traci.edge.getLastStepHaltingNumber(ids))
 
+        stop_list = np.array([val for sublist in edge_stops.values() for val in sublist])
+        total_stops = np.sum(stop_list)
 
-        return edge_stops
+        return total_stops
 
+    def get_flow(self):
+
+        traci = self.traci_conn
+        major_ids = ['west', 'east']
+        flows = {'major':[], 'minor':[]}
+        step = traci.simulation.getDeltaT()
+
+        for ids in self.edges:
+            if major_ids[0] in ids:
+                flows['major'].append(traci.edge.getLastStepVehicleNumber(ids)/step)
+            elif major_ids[1] in ids:
+                flows['major'].append(traci.edge.getLastStepVehicleNumber(ids)/step)
+            else:
+                flows['minor'].append(traci.edge.getLastStepVehicleNumber(ids)/step)
+
+        flow_list = np.array([val for sublist in flows.values() for val in sublist])
+        avg_traffic_flow = np.mean(flow_list)  
+
+        return avg_traffic_flow
     def get_queue(self):
 
         traci = self.traci_conn
@@ -363,9 +404,11 @@ class InfoWrapper(gym.Wrapper):
                 queues['major'].append(traci.edge.getLastStepVehicleNumber(ids))
             else:
                 queues['minor'].append(traci.edge.getLastStepVehicleNumber(ids))
-        
-        return queues
 
+        queue_list = np.array([val for sublist in queues.values() for val in sublist])
+        avg_queue_length = np.mean(queue_list)
+        
+        return avg_queue_length
 
 
 
