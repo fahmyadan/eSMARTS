@@ -183,9 +183,11 @@ class HiWayEnv(gym.Env):
                 sumo_port=sumo_port,
                 auto_start=sumo_auto_start,
             )
+            self.sumo_traffic= sumo_traffic
             traffic_sims += [sumo_traffic]
         smarts_traffic = LocalTrafficProvider()
         traffic_sims += [smarts_traffic]
+        
 
         self._smarts = SMARTS(
             agent_interfaces=self._agent_interfaces,
@@ -282,6 +284,9 @@ class HiWayEnv(gym.Env):
             isinstance(key, str) for key in agent_actions.keys()
         ), "Expected Dict[str, any]"
 
+        if self.sumo_traffic._traci_conn._traci_conn is not None:
+            self.traci_conn = self.sumo_traffic._traci_conn._traci_conn
+        
         observations, rewards, dones, extras = self._smarts.step(
             self._action_space_formatter.format(agent_actions)
         )
@@ -336,3 +341,7 @@ class HiWayEnv(gym.Env):
         """Closes the environment and releases all resources."""
         if self._smarts is not None:
             self._smarts.destroy()
+
+    def get_traci(self, traci_conn):
+
+        return traci_conn
