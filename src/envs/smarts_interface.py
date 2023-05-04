@@ -268,6 +268,16 @@ class InfoWrapper(gym.Wrapper):
    
     def reset(self, **kwargs):
         self._obs = super().reset(**kwargs)
+        self.avg_delay = []
+        self.avg_speed= []
+        self.avg_edge_delay= [] 
+        self.edge_tt= [] 
+        self.n_stops= [] 
+        self.queue= []
+        self.flow = []
+        self.reached_goal = 0 
+        self.n_collisions = 0 
+        self.violation = 0 
         return self._obs 
     def step(self, action):
         self._obs, _reward, done, self.info = super().step(action)
@@ -275,16 +285,30 @@ class InfoWrapper(gym.Wrapper):
         self.traci_conn = self.env.traci_conn
         self.edges = self.traci_conn.edge.getIDList()[-8:]
         self.vehs = self.traci_conn.vehicle.getIDList()
-        avg_delay = self.get_avg_veh_waiting_time()
-        avg_speed = self.get_avg_veh_speed()
-        avg_edge_delay = self.get_avg_edge_waiting_time()
-        edge_tt = self.get_avg_edge_travel_time()
-        n_stops = self.get_stopped_vehs()
-        queue = self.get_queue()
-        flow = self.get_flow() 
+        self.avg_delay.append(self.get_avg_veh_waiting_time())
+        self.avg_speed.append(self.get_avg_veh_speed())
+        self.avg_edge_delay.append(self.get_avg_edge_waiting_time())
+        self.edge_tt.append(self.get_avg_edge_travel_time())
+        self.n_stops.append(self.get_stopped_vehs())
+        self.queue.append(self.get_queue())
+        self.flow.append(self.get_flow()) 
+        env_info = dict(list(self.info.items())[:-1])
+        traffic_state = self.info['traffic_state']
 
-        self.info = {'avg_delay':avg_delay, 'avg_speed':avg_speed, 'avg_edge_delay':avg_edge_delay,
-                'med_edge_tt':edge_tt, 'total_stops':n_stops, 'avg_queue_length': queue, 'avg_flow': flow}
+        for agent in env_info:
+            if self.info[agent]['env_obs'].events.reached_goal:
+                self.reached_goal+= 1
+            elif len(self.info[agent]['env_obs'].events.collisions) > 0:
+                self.n_collisions+=1 
+        
+        for agents in traffic_state.keys():
+            if self.info['traffic_state'][agents].vio == 1: 
+                self.violation+=1
+
+        self.info = {'avg_delay':np.array(self.avg_delay), 'avg_speed':np.array(self.avg_speed), 
+                    'avg_edge_delay':np.array(self.avg_edge_delay),'total_edge_tt':np.array(self.edge_tt), 
+                    'total_stops':np.array(self.n_stops), 'avg_queue_length': np.array(self.queue), 
+                    'avg_flow': np.array(self.flow), 'agents_complete': self.reached_goal, 'n_collisions':self.n_collisions, 'traffic_vios': self.violation}
         
         return self._obs, _reward, done, self.info
 
@@ -299,7 +323,7 @@ class InfoWrapper(gym.Wrapper):
             wait = traci.vehicle.getAccumulatedWaitingTime(ids)
             acc_wait[i] = wait
 
-        return np.mean(acc_wait) 
+        return np.sum(acc_wait) 
     def get_avg_veh_speed(self):
 
         traci = self.traci_conn
@@ -327,10 +351,10 @@ class InfoWrapper(gym.Wrapper):
             else:
                 edge_delay['minor'].append(traci.edge.getWaitingTime(ids))
 
-        total_avg_delay = 0
+        total_avg_delay = 0 
         for vals in edge_delay.values():
 
-            total_avg_delay+=sum(vals)
+            total_avg_delay= sum(vals)
         
         return total_avg_delay 
    
@@ -388,7 +412,7 @@ class InfoWrapper(gym.Wrapper):
                 flows['minor'].append(traci.edge.getLastStepVehicleNumber(ids)/step)
 
         flow_list = np.array([val for sublist in flows.values() for val in sublist])
-        avg_traffic_flow = np.mean(flow_list)  
+        avg_traffic_flow = np.sum(flow_list)  
 
         return avg_traffic_flow
     def get_queue(self):
@@ -406,7 +430,7 @@ class InfoWrapper(gym.Wrapper):
                 queues['minor'].append(traci.edge.getLastStepVehicleNumber(ids))
 
         queue_list = np.array([val for sublist in queues.values() for val in sublist])
-        avg_queue_length = np.mean(queue_list)
+        avg_queue_length = np.sum(queue_list)
         
         return avg_queue_length
 
@@ -431,6 +455,7 @@ class RewardWrapper(gym.RewardWrapper):
         self._obs, _reward, done, info = super().step(action)
 
         done = done['__all__']
+        info['traffic_state'] = self.traffic_state_encoder.memory[-1]
         return self._obs, _reward, done, info
     def reward(self, reward):
         # TODO: Calculate Reward for collision, crossing + merging
