@@ -1,9 +1,23 @@
 {
-// Use IntelliSense to learn about possible attributes.
-// Hover to view descriptions of existing attributes.
-// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "name": "eSMARTS (maa2c)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--config=maa2c",
+                "--env-config=gymma",
+                "with",
+                "env_args.key=hiwayenv-v0"
+            ]
+        },
         {
             "name": "lbforaging",
             "type": "python",
@@ -16,11 +30,10 @@
                 "--env-config=gymma",
                 "with",
                 "env_args.key=lbforaging:Foraging-8x8-2p-3f-v2"
-                
             ]
         },
         {
-            "name": "eSMARTS",
+            "name": "eSMARTS (qmix)",
             "type": "python",
             "request": "launch",
             "program": "${file}",
