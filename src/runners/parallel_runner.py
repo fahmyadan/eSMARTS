@@ -25,8 +25,9 @@ class ParallelRunner:
         self.ps = [Process(target=env_worker, args=(worker_conn, CloudpickleWrapper(partial(env_fn, **env_arg))))
                             for env_arg, worker_conn in zip(env_args, self.worker_conns)]
 
+
         for p in self.ps:
-            p.daemon = True
+            p.daemon = False
             p.start()
 
         self.parent_conns[0].send(("get_env_info", None))
@@ -183,7 +184,27 @@ class ParallelRunner:
         for parent_conn in self.parent_conns:
             env_stat = parent_conn.recv()
             env_stats.append(env_stat)
+        
+        
+        for i in range(len(final_env_infos)):
+            for key,val in final_env_infos[i].items():
+                if key == 'avg_delay':
+                    final_env_infos[i][key] = np.mean(val)
+                elif key == 'avg_speed':
+                    final_env_infos[i][key] = np.mean(val)
 
+                elif key == 'avg_edge_delay':
+                    final_env_infos[i][key] = np.mean(val)
+                elif key == 'total_edge_tt':
+                    final_env_infos[i][key] = np.sum(val)
+                elif key == 'avg_flow':
+                    final_env_infos[i][key] = np.mean(val)
+                elif key == 'avg_queue_length':
+                    final_env_infos[i][key] = np.mean(val)
+                else:
+                    final_env_infos[i][key]= np.sum(val)
+
+        print('--------------------------------------EPISODE DONE-----------------------------------------------------------------------------')
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
