@@ -25,7 +25,7 @@ learner: "q_learner"
 standardise_returns: False
 standardise_rewards: True
 double_q: True
-use_rnn: False
+use_rnn: True
 mixer: # Mixer becomes None
 
 name: "iql"
