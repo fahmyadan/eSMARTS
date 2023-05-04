@@ -5,7 +5,7 @@ env_args:
   time_limit: 1000
   pretrained_wrapper: null
   visdom: False 
-  sumo_headless: False
+  sumo_headless: True
   sumo_port: 45761
   scenarios: "intersections/4lane_merge"
   headless: True
@@ -29,12 +29,15 @@ env_args:
     episode_limit: 10000
     name: intersection_merge
 
-checkpoint_path: ''
+checkpoint_path: '' 
+save_model: True # Save the models to disk
+save_model_interval: 50000
 evaluate: False 
+use_tensorboard: True 
 test_greedy: True
-test_nepisode: 100
-test_interval: 500000
+test_nepisode: 20
+test_interval: 5000
 log_interval: 1000
-runner_log_interval: 10000
-learner_log_interval: 10000
+runner_log_interval: 1000
+learner_log_interval: 1000
 t_max: 2050000
