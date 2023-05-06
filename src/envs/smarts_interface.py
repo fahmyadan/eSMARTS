@@ -463,17 +463,18 @@ class RewardWrapper(gym.RewardWrapper):
         max_rss = self.env.max_risk
         ttc = self.env.ttc_obs
         total_reward = {}
-        compliance_reward = self.compliance_reward(latest_traffic_states)
+        # compliance_reward = self.compliance_reward(latest_traffic_states)
         collision_reward = self.collision_reward(latest_traffic_states)
         violation_reward = self.violation_reward(latest_traffic_states)
-        merging_reward = self.merging_zone_reward(latest_traffic_states)
+        # merging_reward = self.merging_zone_reward(latest_traffic_states)
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
-        safety_reward = self.safety_reward(max_rss, ttc)
+        # safety_reward = self.safety_reward(max_rss, ttc)
 
 
 
-        for keys in compliance_reward.keys():
-            total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
+        for keys in intersection_reward.keys():
+            total_reward[keys]  = collision_reward[keys] + violation_reward[keys]  + intersection_reward[keys]
+            # total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
 
 
 
@@ -499,7 +500,7 @@ class RewardWrapper(gym.RewardWrapper):
             if val.vio == 1: 
                 violation_reward[key] = -100
             else: 
-                violation_reward[key] = 0 
+                violation_reward[key] = +10 
         return violation_reward
 
     def merging_zone_reward(self, state_enc):
