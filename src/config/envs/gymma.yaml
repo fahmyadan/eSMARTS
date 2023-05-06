@@ -14,8 +14,6 @@ env_args:
 
   agent_specs:
     agent_builder: LaneAgent
-    reward_adapter: reward_adapter
-    observation_adapter: observation_adapter
     agent_interface:
       agent_type: Laner
       neighbourhood_vehicle_radius: 1000
@@ -29,9 +27,8 @@ env_args:
     episode_limit: 10000
     name: intersection_merge
     
-buffer_size: 50
-use_rnn: False
-checkpoint_path: '' 
+
+
 save_model: True # Save the models to disk
 save_model_interval: 50000
 evaluate: False 
