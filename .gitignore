@@ -252,3 +252,5 @@ results/
 .38epy/
 *.epy/
 .vscode/*
+.tb/*
+.venv/*

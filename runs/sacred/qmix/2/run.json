@@ -1,0 +1,114 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/home/felix/F_A/eSMARTS/src",
+    "dependencies": [
+      "numpy==1.23.5",
+      "PyYAML==5.3.1",
+      "sacred==0.8.4",
+      "torch==2.0.0"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "a7ac34bd1ebfe5ac7518d3f3b56912ecbf375818",
+        "dirty": false,
+        "url": "git@github.com:fahmyadan/eSMARTS.git"
+      },
+      {
+        "commit": "a7ac34bd1ebfe5ac7518d3f3b56912ecbf375818",
+        "dirty": false,
+        "url": "git@github.com:fahmyadan/eSMARTS.git"
+      },
+      {
+        "commit": "a7ac34bd1ebfe5ac7518d3f3b56912ecbf375818",
+        "dirty": false,
+        "url": "git@github.com:fahmyadan/eSMARTS.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_989a983dde4e3200df254703044d7067.py"
+      ],
+      [
+        "run.py",
+        "_sources/run_e953bb1907b6c7bc13b1e2aaf1475f8e.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_1a2698ee8eee65508b6ba477a01b0a24.py"
+      ]
+    ]
+  },
+  "heartbeat": "2023-04-28T23:04:21.857332",
+  "host": {
+    "ENV": {},
+    "cpu": "Intel(R) Xeon(R) Gold 5220R CPU @ 2.20GHz",
+    "gpus": {
+      "driver_version": "470.182.03",
+      "gpus": [
+        {
+          "model": "NVIDIA RTX A5000",
+          "persistence_mode": false,
+          "total_memory": 24256
+        },
+        {
+          "model": "NVIDIA RTX A5000",
+          "persistence_mode": false,
+          "total_memory": 24253
+        }
+      ]
+    },
+    "hostname": "cv-iits-rb02",
+    "os": [
+      "Linux",
+      "Linux-5.15.0-69-generic-x86_64-with-glibc2.29"
+    ],
+    "python_version": "3.8.10"
+  },
+  "meta": {
+    "command": "my_main",
+    "config_updates": {
+      "env_args": {
+        "key": "hiwayenv-v0"
+      }
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "env_args.key=hiwayenv-v0"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2023-04-28T15:01:03.615209",
+  "status": "COMPLETED",
+  "stop_time": "2023-04-29T11:40:58.115533"
+}
