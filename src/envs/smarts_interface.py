@@ -470,6 +470,8 @@ class RewardWrapper(gym.RewardWrapper):
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
         safety_reward = self.safety_reward(max_rss, ttc)
 
+
+
         for keys in compliance_reward.keys():
             total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
 
@@ -495,12 +497,14 @@ class RewardWrapper(gym.RewardWrapper):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -10
+                violation_reward[key] = -100
             else: 
                 violation_reward[key] = 0 
         return violation_reward
 
     def merging_zone_reward(self, state_enc):
+
+        #TODO: Change merging reward
         merge_reward = {}
 
         for key, val in state_enc.items():
@@ -533,7 +537,7 @@ class RewardWrapper(gym.RewardWrapper):
         collision_reward = {}
         for key, val in state_enc.items():
             if val.collided == 1:
-                collision_reward[key] = -10
+                collision_reward[key] = -100
             else:
                 collision_reward[key] = 0 
         return collision_reward
@@ -562,7 +566,7 @@ merge_length = 70
  
 def merge_parabola(s, a=0.5):
 
-    r = ((-4/merge_length**2) * (s - (0.5*merge_length))**2) + 1
+    r = (-1/ merge_length) * (s- merge_length)
 
     return r 
 
