@@ -16,7 +16,7 @@ from SMARTS.smarts.core.utils.logging import timeit
 from SMARTS.smarts.core.utils.visdom_client import VisdomClient
 from SMARTS.smarts.zoo.agent_spec import AgentSpec
 from SMARTS.smarts.core.controllers import ActionSpaceType
-from SMARTS.smarts.core.agent_interface import AgentInterface, AgentType, NeighborhoodVehicles, DoneCriteria
+from SMARTS.smarts.core.agent_interface import AgentInterface, AgentType, NeighborhoodVehicles, DoneCriteria, RGB
 from SMARTS.smarts.core.agent import Agent
 from SMARTS.smarts.core.sumo_traffic_simulation import SumoTrafficSimulation
 from SMARTS.smarts.core.utils.math import position_to_ego_frame , velocity_to_ego_frame
@@ -56,7 +56,7 @@ class SmartsInterface:
 
         self._agent_interface = AgentInterface.from_type(requested_type=req_type,
                                                     neighborhood_vehicle_states=NeighborhoodVehicles(radius=agent_int_config['neighbourhood_vehicle_radius']), 
-                                                    max_episode_steps=agent_int_config['max_episode_steps']) 
+                                                    max_episode_steps=agent_int_config['max_episode_steps'], top_down_rgb = RGB(width=256, height=256, resolution=100/256) ) 
 
         self.agent_interface = {ids: self._agent_interface for ids in self.agent_ids}
 
