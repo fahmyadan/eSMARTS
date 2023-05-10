@@ -85,6 +85,6 @@ class BasicMAC:
         if self.args.obs_last_action:
             input_shape += scheme["actions_onehot"]["vshape"][0]
         if self.args.obs_agent_id:
-            input_shape += self.n_agents
+            input_shape += (self.n_agents,)
 
         return input_shape
