@@ -56,7 +56,7 @@ class SmartsInterface:
 
         self._agent_interface = AgentInterface.from_type(requested_type=req_type,
                                                     neighborhood_vehicle_states=NeighborhoodVehicles(radius=agent_int_config['neighbourhood_vehicle_radius']), 
-                                                    max_episode_steps=agent_int_config['max_episode_steps'], top_down_rgb = RGB(width=256, height=256, resolution=100/256) ) 
+                                                    max_episode_steps=agent_int_config['max_episode_steps'], top_down_rgb = RGB(width=112, height=112, resolution=50/112) ) 
 
         self.agent_interface = {ids: self._agent_interface for ids in self.agent_ids}
 
@@ -91,12 +91,14 @@ class LaneAgent(Agent):
         return lane_actions 
 major_edges = ['edge-east-WE_0','edge-east-WE_1', 'edge-east-EW_0','edge-east-EW_1', 
                 'edge-west-EW_0', 'edge-west-EW_1 ','edge-west-WE_0', 'edge-west-WE_1']
+
+
 class ObservationWrap(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, **kwargs):
         super().__init__(env)
         self.env_info = kwargs['env_info']
-        self.observation_space = [gym.spaces.Tuple(observation_space) for i in range(self.env_info['n_agents'])]
-        self.state_size = self.env_info['state_shape']
+        self.observation_space = [observation_space for i in range(self.env_info['n_agents'])]
+        self.state_size = (self.env_info['n_agents']* self.env_info['n_pixels'],self.env_info['n_pixels'], 3)
         self.traffic_state_encoder = TrafficStateEncoder()
         self.max_risk = None
         self.ttc_obs = None  
@@ -110,101 +112,22 @@ class ObservationWrap(gym.ObservationWrapper):
 
 
         self.traffic_state_encoder.update(env_obs)
-
-        agent_obs = {ids : [self.ttc_obs[ids]['ego_ttc'],self.ttc_obs[ids]['ego_lane_dist'] ,self.max_risk[ids]] for ids in env_obs.keys() }
+        all_agent_ids =[f'Agent-{i}' for i in range(1, 5)]
         
-        # Distance along the lane: 130m for major, 70m for minor
-        # Check for major/minor road
-        for ids in env_obs.keys():
-            neig_disc = []
+        env_obs = {k: env_obs[k].top_down_rgb.data for k in all_agent_ids if k in env_obs.keys()}
 
-            # Get position, linear vel, linear acc, heading 
-
-            agent_obs[ids].append(env_obs[ids].ego_vehicle_state.position)
-            agent_obs[ids].append(env_obs[ids].ego_vehicle_state.linear_velocity)
-            agent_obs[ids].append(env_obs[ids].ego_vehicle_state.linear_acceleration)
-            agent_obs[ids].append(env_obs[ids].ego_vehicle_state.heading)
-
-            # Get neighbor relative position (5 closest), reltive , velocity
-            neighbor_obs, neighbor_priority = self.neighbor_obs(env_obs=env_obs[ids])
-
-            for near_obs in neighbor_obs:
-                for sens in near_obs:
-                    agent_obs[ids].append(sens)
-
-            if env_obs[ids].ego_vehicle_state.lane_id in major_edges:
-                lane_priority = 1 #major
-                intersection_distance = 130 - env_obs[ids].distance_travelled
-                agent_obs[ids].append(np.array(intersection_distance))
-            
-                
-            else:
-                lane_priority = 0 #minor
-                intersection_distance = 70 - env_obs[ids].distance_travelled 
-                agent_obs[ids].append(np.array(intersection_distance))
-         
-            neig_disc.append(np.array(lane_priority))
-
-            for priority in neighbor_priority:
-                neig_disc.append(priority) 
-            
-            agent_obs[ids].append(neig_disc)
-
-        
-        if len(agent_obs) != 4:
-
-            agent_ids = [f'Agent-{i}' for i in range(1, self.env_info['n_agents'] +1)]
-            max_len = len(agent_ids)
-            cont_padding = np.zeros(48,)
-            disc_padding = np.zeros(6,)
-            for all_id in agent_ids: 
-                if all_id not in agent_obs.keys():
-                    agent_obs[all_id] = [cont_padding, [disc_padding]] 
+        for all_ids in all_agent_ids:
+            if all_ids not in env_obs:
+                env_obs[all_ids] = np.zeros((112,112,3)) 
 
 
-        obs_wrap = [(np.hstack(np.array(val[:-1], dtype=object)), np.hstack(val[-1]))  for val in agent_obs.values()]
-        obs = np.array(obs_wrap)
+        env_obs = [env_obs.get(agent_id) for agent_id in all_agent_ids ]
 
-        return obs
+        return env_obs
 
-    def neighbor_obs(self, env_obs: Observation) -> List[Sequence[np.ndarray]]: 
+    def neighbor_obs(self, env_obs: Observation): 
 
-        all_neighbor_obs = {}
-        n_priority = []
-        for detected in env_obs.neighborhood_vehicle_states:
-
-            n_obs = []
-            neighbor_id = detected.id
-            neighbor_velocity = np.array([detected.speed, 0])
-            relative_position = np.array(position_to_ego_frame(position=detected.position, 
-                                    ego_heading=env_obs.ego_vehicle_state.heading, 
-                                    ego_position=env_obs.ego_vehicle_state.position))
-            relative_vel = velocity_to_ego_frame(neighbor_velocity, detected.heading,
-                                    env_obs.ego_vehicle_state.heading)
-            n_obs.append(relative_position)
-            n_obs.append(relative_vel)
-            # Calculate relative heading 
-            neighbor_heading = detected.heading 
-            rel_heading = neighbor_heading - env_obs.ego_vehicle_state.heading
-            normalized_heading = np.arctan2(np.sin(rel_heading), np.cos(rel_heading))
-            n_obs.append(np.array(normalized_heading))
-            # Check priority
-            if detected.lane_id in major_edges:
-                detected_priority = 1
-            else: 
-                detected_priority = 0 
-            
-            n_obs.append(np.array(detected_priority))
-            all_neighbor_obs[neighbor_id] = n_obs
-
-        # Get the 5 closest neighbors + CAVs approaching the intersection 
-        neighbor_distances = {k: np.linalg.norm(v[0]) for k, v in all_neighbor_obs.items()}
-        closest_veh_keys = sorted(neighbor_distances, key=neighbor_distances.get)[:5]
-        closest_neighbor_obs = {k: all_neighbor_obs[k][:-1] for k in closest_veh_keys}
-
-        neighbor_cont_obs = [val for val in closest_neighbor_obs.values()]
-        neighbor_discrete_obs = [all_neighbor_obs[k][-1] for k in closest_veh_keys]
-        return [neighbor_cont_obs, neighbor_discrete_obs]
+        return None 
     
     def missing_agents(self, missing:int) -> Tuple[np.ndarray]:
         # TODO: Deal with missing obs / agents with a better padding function
