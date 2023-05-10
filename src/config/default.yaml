@@ -30,7 +30,7 @@ local_results_path: "results" # Path for local results
 # --- RL hyperparameters ---
 gamma: 0.99
 batch_size: 32 # Number of episodes to train on
-buffer_size: 32 # Size of the replay buffer
+buffer_size: 10 # Size of the replay buffer
 lr: 0.0005 # Learning rate for agents
 optim_alpha: 0.99 # RMSProp alpha
 optim_eps: 0.00001 # RMSProp epsilon
@@ -38,7 +38,7 @@ grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
 add_value_last_step: True
 
 # --- Agent parameters ---
-agent: "rnn1" # Default rnn agent
+agent: "cnn" # Default rnn agent
 hidden_dim: 128 # Size of hidden state for default rnn agent
 out_dim: 64
 obs_agent_id: True # Include the agent's one_hot id in the observation

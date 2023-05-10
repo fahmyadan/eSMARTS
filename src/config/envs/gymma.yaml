@@ -5,7 +5,7 @@ env_args:
   time_limit: 1000
   pretrained_wrapper: null
   visdom: False 
-  sumo_headless: True
+  sumo_headless: False
   sumo_port: 45761
   scenarios: "intersections/4lane_merge"
   headless: True
@@ -22,8 +22,8 @@ env_args:
   env_info:
     n_agents: 4
     n_actions: 4
-    obs_shape: 54
-    state_shape: 216 
+    n_pixels: 112  #112*112*3
+    state_shape: 
     episode_limit: 10000
     name: intersection_merge
     
@@ -32,7 +32,7 @@ env_args:
 save_model: True # Save the models to disk
 save_model_interval: 50000
 evaluate: False 
-use_tensorboard: True 
+use_tensorboard: False 
 test_greedy: True
 test_nepisode: 5
 test_interval: 50000
