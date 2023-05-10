@@ -63,7 +63,7 @@ box_obs_space = gym.spaces.Box(low=np.array(flatten_low), high=np.array(flatten_
 
 priority_obs_space = gym.spaces.MultiDiscrete([2] * 6) # Discrete(2) for ego  + 5 neighbor prioirty 
 
-observation_space = (box_obs_space, priority_obs_space)
+observation_space = gym.spaces.Box(low=0, high=255, shape=(112,112,3), dtype=np.float32)
 
 # observation_space = [gym.spaces.Box(low=0, high=1000, shape=(3,)), #TTC
 #                      gym.spaces.Box(low=-1e10, high=1e10, shape=(3,)), #ego lane dist 
