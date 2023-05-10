@@ -1,6 +1,9 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt 
+import numpy as np 
+
 
 class CNNAgent(nn.Module):
     def __init__(self, input_shape, args):
@@ -8,7 +11,7 @@ class CNNAgent(nn.Module):
         self.args = args
 
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(input_shape[-1], out_channels=32, kernel_size=8, stride=4 ),
+            nn.Conv2d(input_shape[0], out_channels=32, kernel_size=8, stride=4 ),
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=4, stride=2),
             nn.ReLU(),
@@ -16,13 +19,15 @@ class CNNAgent(nn.Module):
             nn.ReLU()
         )
         with torch.no_grad():
-            conv_out = self.conv_layers(torch.zeros(1, *input_shape)).flatten().shape[0]
+            #Initialise the zeros with shape (batch_size = 4-agents, channels, height, width )
+            conv_out = self.conv_layers(torch.zeros(input_shape[-1], *input_shape[:-1])).view(4,-1).shape
+            
 
-        self.fc1 = nn.Linear(conv_out, args.hidden_dim)
+        self.fc1 = nn.Linear(args.hidden_dim, args.hidden_dim)
         if self.args.use_rnn:
-            self.rnn = nn.GRUCell(args.hidden_dim, args.hidden_dim)
+            self.rnn = nn.GRUCell(conv_out[1], args.hidden_dim)
         else:
-            self.rnn = nn.Linear(args.hidden_dim, args.hidden_dim)
+            self.rnn = nn.Linear(conv_out[0] * conv_out[1], args.hidden_dim)
 
         self.fc1_5 = nn.Linear(args.hidden_dim, args.out_dim)
         self.fc2 = nn.Linear(args.out_dim, args.n_actions)
@@ -35,16 +40,20 @@ class CNNAgent(nn.Module):
 
     def forward(self, input, hidden_state):
         # Process the state through the convolutional layers
+        state = input.squeeze(0)
+
         conv_out = self.conv_layers(state)
-        conv_out = conv_out.flatten(start_dim=1)
 
-
-        x = F.relu(self.fc1(conv_out))
+        spatial_features = conv_out.view(4,-1)
+        # flat_conv = conv_out.flatten()
+        # x = F.relu(self.fc1(flat_conv))
         h_in = hidden_state.reshape(-1, self.args.hidden_dim)
         if self.args.use_rnn:
-            h = self.rnn(x, h_in)
+            h = self.rnn(spatial_features, h_in)
         else:
-            h = F.relu(self.rnn(x))
-        f = self.fc1_5(h)
+            h = F.relu(self.rnn(conv_out.flatten()))
+        
+        l = self.fc1(h)
+        f = self.fc1_5(l)
         q = self.fc2(f)
         return q, h
