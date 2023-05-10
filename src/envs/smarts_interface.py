@@ -98,7 +98,7 @@ class ObservationWrap(gym.ObservationWrapper):
         super().__init__(env)
         self.env_info = kwargs['env_info']
         self.observation_space = [observation_space for i in range(self.env_info['n_agents'])]
-        self.state_size = (self.env_info['n_agents']* self.env_info['n_pixels'],self.env_info['n_pixels'], 3)
+        self.state_size = (self.env_info['n_agents']* 3 ,self.env_info['n_pixels'],self.env_info['n_pixels'] )
         self.traffic_state_encoder = TrafficStateEncoder()
         self.max_risk = None
         self.ttc_obs = None  
@@ -114,11 +114,11 @@ class ObservationWrap(gym.ObservationWrapper):
         self.traffic_state_encoder.update(env_obs)
         all_agent_ids =[f'Agent-{i}' for i in range(1, 5)]
         
-        env_obs = {k: env_obs[k].top_down_rgb.data for k in all_agent_ids if k in env_obs.keys()}
+        env_obs = {k: env_obs[k].top_down_rgb.data.transpose(2, 0, 1) for k in all_agent_ids if k in env_obs.keys()}
 
         for all_ids in all_agent_ids:
             if all_ids not in env_obs:
-                env_obs[all_ids] = np.zeros((112,112,3)) 
+                env_obs[all_ids] = np.zeros((3,112,112)) 
 
 
         env_obs = [env_obs.get(agent_id) for agent_id in all_agent_ids ]
@@ -137,6 +137,7 @@ class ActionWrap(gym.ActionWrapper):
     def __init__(self, env: gym.Env, **kwargs):
         super().__init__(env)
         self.env= env
+        self.agent_ids = [f'Agent-{i}' for i in range(1, 5)] 
         
         self._wrapper, self.action_space = _discrete(self.agent_ids)
 
@@ -145,7 +146,7 @@ class ActionWrap(gym.ActionWrapper):
 
         Note: Users should not directly call this method.
         """
-        self.agent_ids = self.env.env.agent_ids
+        
         #Convert action
         wrapped_act = self._wrapper(action)
         return wrapped_act
@@ -154,14 +155,7 @@ class ActionWrap(gym.ActionWrapper):
 def _discrete(agent_ids) -> Tuple[Callable[[int], np.ndarray], gym.Space]:
     space = gym.spaces.Discrete(n=4)
     space = gym.spaces.Tuple([space] * 4)
-    agent_ids = agent_ids 
-    # action_map = {
-    #     # key: [throttle, brake, steering]
-    #     0: [0.3, 0, 0],  # keep_direction
-    #     1: [0, 1, 0],  # slow_down
-    #     2: [0.3, 0, -0.5],  # turn_left
-    #     3: [0.3, 0, 0.5],  # turn_right
-    # }
+
     action_map = {
         0: 'keep_lane', 
         1: 'slow_down', 
