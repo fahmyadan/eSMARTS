@@ -252,3 +252,4 @@ results/
 .38epy/
 *.epy/
 .vscode/*
+.ipy/
