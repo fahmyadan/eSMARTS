@@ -252,4 +252,9 @@ results/
 .38epy/
 *.epy/
 .vscode/*
+<<<<<<< HEAD
 .ipy/
+=======
+.venv/*
+.tb/*
+>>>>>>> 8326dcf9242b8cf32bccc529eabec1215ffc559d
