@@ -148,15 +148,15 @@ class _GymmaWrapper(MultiAgentEnv):
         #Convert actions to dictionary for each agent 
         self._obs, reward, done, self._info = self._env.step(actions)
         #obs: (array1, array2) |  reward: [int,int] |done [bool * n_agent ] | info: {}
-        self._obs = [
-            np.pad(
-                o,
-                (0, self.longest_observation_space.shape[0] - len(o)),
-                "constant",
-                constant_values=0,
-            )
-            for o in self._obs
-        ]
+        # self._obs = [
+        #     np.pad(
+        #         o,
+        #         (0, self.longest_observation_space.shape[0] - len(o)),
+        #         "constant",
+        #         constant_values=0,
+        #     )
+        #     for o in self._obs
+        # ]
 
         if type(reward) is list:
             reward = sum(reward)
