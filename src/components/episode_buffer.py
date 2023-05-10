@@ -1,3 +1,4 @@
+from typing import Sequence
 import torch as th
 import numpy as np
 from types import SimpleNamespace as SN
@@ -72,7 +73,9 @@ class EpisodeBatch:
             if episode_const:
                 self.data.episode_data[field_key] = th.zeros((batch_size, *shape), dtype=dtype, device=self.device)
             else:
+                print(f'-----------------check -------------- /n {field_key} , batch {batch_size}, length{max_seq_length}')
                 self.data.transition_data[field_key] = th.zeros((batch_size, max_seq_length, *shape), dtype=dtype, device=self.device)
+                
 
     def extend(self, scheme, groups=None):
         self._setup_data(scheme, self.groups if groups is None else groups, self.batch_size, self.max_seq_length)
