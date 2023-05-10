@@ -107,7 +107,7 @@ class _GymmaWrapper(MultiAgentEnv):
             scenarios = smarts_interface.get_scenarios()
             agent_interface = smarts_interface.get_agent_interface()
             agent_specs = smarts_interface.get_agent_spec()
-            smarts_args = {'scenarios': scenarios, 'sumo_headless': kwargs['sumo_headless'],
+            smarts_args = {'visdom':kwargs['visdom'],'scenarios': scenarios, 'sumo_headless': kwargs['sumo_headless'],
                             'headless': kwargs['headless'], 'num_external_sumo_clients': kwargs['num_external_sumo_clients'],
                             'sumo_port': kwargs['sumo_port'],
                             'agent_interfaces': agent_interface}
@@ -122,7 +122,7 @@ class _GymmaWrapper(MultiAgentEnv):
         self.episode_limit = time_limit
         
         self._env = TimeLimit(self.original_env, max_episode_steps=time_limit)
-        self._env = FlattenObservation(self._env)
+        # self._env = FlattenObservation(self._env)
 
         if pretrained_wrapper:
             self._env = getattr(pretrained, pretrained_wrapper)(self._env)
@@ -174,7 +174,8 @@ class _GymmaWrapper(MultiAgentEnv):
 
     def get_obs_size(self):
         """ Returns the shape of the observation """
-        return flatdim(self.longest_observation_space)
+        #return flatdim(self.longest_observation_space)
+        return self.longest_observation_space.shape[::-1]
 
     def get_state(self):
         return np.concatenate(self._obs, axis=0).astype(np.float32)
@@ -241,15 +242,17 @@ class _GymmaWrapper(MultiAgentEnv):
     def reset(self):
         """ Returns initial observations and states"""
         self._obs = self._env.reset()
-        self._obs = [
-            np.pad(
-                o,
-                (0, self.longest_observation_space.shape[0] - len(o)),
-                "constant",
-                constant_values=0,
-            )
-            for o in self._obs
-        ]
+        # self._obs = [
+        #     np.pad(
+        #         o,
+        #         (0, self.longest_observation_space.shape[0] - len(o)),
+        #         "constant",
+        #         constant_values=0,
+        #     )
+        #     for o in self._obs
+        # ]
+
+
         return self.get_obs(), self.get_state()
 
     def render(self):
