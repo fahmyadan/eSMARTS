@@ -124,7 +124,7 @@ class EpisodeRunner:
         cur_stats.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
-
+        print(f'-----------------EPISODE STATS------------------\n  {cur_stats}')
         if not test_mode:
             self.t_env += self.t
 
