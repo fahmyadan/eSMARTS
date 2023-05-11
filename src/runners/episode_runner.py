@@ -102,21 +102,25 @@ class EpisodeRunner:
         # env_info = {k:np.median(v) for k,v in env_info.items()}
         for key, val in env_info.items():
             if key == 'avg_delay':
-                env_info[key] = np.sum(val)
+                env_info[key] = np.mean(val)
             elif key == 'avg_speed':
                 env_info[key] = np.mean(val)
 
             elif key == 'avg_edge_delay':
-                env_info[key] = np.sum(val)
+                env_info[key] = np.mean(val)
             elif key == 'total_edge_tt':
-                env_info[key] = np.sum(val)
+                env_info[key] = np.mean(val)
             elif key == 'avg_flow':
                 env_info[key] = np.mean(val)
             elif key == 'avg_queue_length':
-                env_info[key] = np.mean(val)
-            else:
+                env_info[key] = np.ptp(val)
+            elif key == 'total_stops':
                 env_info[key]= np.sum(val)
-            
+            elif key in ['agents_complete', 'n_collisions', 'traffic_vios']:
+                env_info[key] = val
+            else:
+                env_info[key] = val
+
 
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
