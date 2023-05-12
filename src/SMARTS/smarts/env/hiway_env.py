@@ -93,7 +93,7 @@ class HiWayEnv(gym.Env):
         scenarios: Sequence[str],
         agent_specs: Optional[Dict[str, AgentSpec]] = None,  # (deprecated)
         sim_name: Optional[str] = None,
-        shuffle_scenarios: bool = True,
+        shuffle_scenarios: bool = False,
         headless: bool = True,
         visdom: bool = False,
         fixed_timestep_sec: Optional[float] = None,
