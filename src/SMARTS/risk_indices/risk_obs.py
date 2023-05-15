@@ -47,8 +47,7 @@ def risk_obs(obs: Observation):
     neigh_speed = []
     local_frame_dist_dict = {}
     local_frame_vel_dict = {}
-    if ego_lin_vel[1] > 5: 
-        print(f'ego lin vel {ego_lin_vel}')
+
   
     if neighbors:
 
