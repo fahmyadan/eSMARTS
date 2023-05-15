@@ -5,6 +5,7 @@ import gym
 import numpy as np
 from smac import env
 from collections import namedtuple
+import time 
 
 from SMARTS.envision.client import Client as Envision
 from SMARTS.smarts.core import agent, seed as smarts_seed
@@ -92,6 +93,8 @@ class LaneAgent(Agent):
 major_edges = ['edge-east-WE_0','edge-east-WE_1', 'edge-east-EW_0','edge-east-EW_1', 
                 'edge-west-EW_0', 'edge-west-EW_1 ','edge-west-WE_0', 'edge-west-WE_1']
 
+route_compliance = {'Merging': ['edge-east-EW_1','edge-west-WE_1', 'edge-north-SN_0', 'edge-south-NS_0']}
+agent_start = {'Merging':[ 'edge-east-EW_0', 'edge-west-WE_0'], 'Coop': ['edge-south-SN_0', 'edge-north-NS_0'] }
 
 class ObservationWrap(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, **kwargs):
@@ -100,30 +103,85 @@ class ObservationWrap(gym.ObservationWrapper):
         self.observation_space = [observation_space for i in range(self.env_info['n_agents'])]
         self.state_size = (self.env_info['n_agents']* 3 ,self.env_info['n_pixels'],self.env_info['n_pixels'] )
         self.traffic_state_encoder = TrafficStateEncoder()
-        self.max_risk = None
-        self.ttc_obs = None  
+        self.max_risk = {}
+        self.ttc_obs = {}  
+        self.merging_agents = []
+        self.coop_agents = []
 
+    def reset(self, **kwargs):
+        self.traffic_state_encoder.reset_state()
+        self.merging_agents = [] 
+        self.coop_agents = []
+        all_agent_ids =[f'Agent-{i}' for i in range(1, 5)]
+        self.agent_mapping = {agent_id: None for agent_id in all_agent_ids} 
+        self.mapped_env_obs = {agent_id: None for agent_id in all_agent_ids} 
+        self.max_risk = {}
+        self.ttc_obs = {}
+        obs = super().reset(**kwargs)
+        return obs
     def observation(self, env_obs: Dict[str, Observation]) -> np.ndarray:
         global major_edges
-        self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in env_obs.items()}
-        risk_dict = {key: risk_obs(val) for key, val in env_obs.items()}
+        if len(self.merging_agents) < 2: 
+            for ids, obs in env_obs.items():
+                if ids not in self.merging_agents and  obs.ego_vehicle_state.lane_id  in agent_start['Merging']:
+                    self.merging_agents.append(ids)
+
+        if len(self.coop_agents) < 2: 
+            for ids, obs in env_obs.items():
+                if ids not in self.coop_agents and obs.ego_vehicle_state.lane_id  in agent_start['Coop']:
+                    self.coop_agents.append(ids)
+
+        if None in self.agent_mapping.values():
+            if len(self.coop_agents) or len(self.merging_agents) ==2: 
+                #check start position of merge
+                for ids, obs in env_obs.items():
+                    if obs.ego_vehicle_state.lane_id == agent_start['Merging'][1]:
+                        self.agent_mapping['Agent-1'] = ids
+                    if obs.ego_vehicle_state.lane_id == agent_start['Merging'][0]:
+                        self.agent_mapping['Agent-2'] = ids
+                    if obs.ego_vehicle_state.lane_id == agent_start['Coop'][0]:
+                        self.agent_mapping['Agent-3'] = ids
+                    if obs.ego_vehicle_state.lane_id == agent_start['Coop'][1]:
+                        self.agent_mapping['Agent-4'] = ids
+
+            
+            print('check agent_mapping ') 
+
+        
+        for key, value in self.agent_mapping.items():
+            self.mapped_env_obs[key] = env_obs.get(value)
+
+        """
+        Remap the observations from SMARTS that sometimes get reassigned to the true agent-obs pair, based on their start location 
+        Ag1-west, ag2-east, ag3-south, ag4-north 
+        """ 
+        risk_dict = {}
+        top_rgb = {} 
+        for agent, obs in self.mapped_env_obs.items():
+            if obs is not None:
+                self.ttc_obs[agent] =  lane_ttc_observation_adapter.transform(obs)
+                risk_dict[agent] = risk_obs(obs)
+                top_rgb[agent] = obs.top_down_rgb.data.transpose(2, 0, 1)
+
+
+        # self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in self.mapped_env_obs.items()}
+        # risk_dict = {key: risk_obs(val) for key, val in self.mapped_env_obs.items()}
 
         self.max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items()}
 
 
-        self.traffic_state_encoder.update(env_obs)
+        self.traffic_state_encoder.update(self.mapped_env_obs)
         all_agent_ids =[f'Agent-{i}' for i in range(1, 5)]
-        
-        env_obs = {k: env_obs[k].top_down_rgb.data.transpose(2, 0, 1) for k in all_agent_ids if k in env_obs.keys()}
+
 
         for all_ids in all_agent_ids:
-            if all_ids not in env_obs:
-                env_obs[all_ids] = np.zeros((3,112,112)) 
+            if all_ids not in top_rgb:
+                top_rgb[all_ids] = np.zeros((3,112,112)) 
 
 
-        env_obs = [env_obs.get(agent_id) for agent_id in all_agent_ids ]
+        top_rgb = [top_rgb.get(agent_id) for agent_id in all_agent_ids ]
 
-        return env_obs
+        return top_rgb
 
     def neighbor_obs(self, env_obs: Observation): 
 
@@ -364,6 +422,7 @@ class RewardWrapper(gym.RewardWrapper):
         self.max_risk = self.env.max_risk
     
     def reset(self, **kwargs):
+        self.step_reward = []
 
         self._obs = super().reset(**kwargs)
         return self._obs 
@@ -382,7 +441,7 @@ class RewardWrapper(gym.RewardWrapper):
         total_reward = {}
         # compliance_reward = self.compliance_reward(latest_traffic_states)
         collision_reward = self.collision_reward(latest_traffic_states)
-        violation_reward = self.violation_reward(latest_traffic_states)
+        # violation_reward = self.violation_reward(latest_traffic_states)
         # merging_reward = self.merging_zone_reward(latest_traffic_states)
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
         # safety_reward = self.safety_reward(max_rss, ttc)
@@ -390,13 +449,17 @@ class RewardWrapper(gym.RewardWrapper):
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys] + violation_reward[keys]  + intersection_reward[keys]
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] #+ violation_reward[keys] 
             # total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
 
 
 
         # Temporary reward
         total_rewards = sum(total_reward.values())
+        self.step_reward.append(total_rewards)
+        if total_rewards != 0: 
+            print('check ')
+
         return total_rewards
     
     def compliance_reward(self, state_enc):
@@ -441,11 +504,11 @@ class RewardWrapper(gym.RewardWrapper):
         for key, val in state_enc.items():
             reward = 0
             if val.reached_goal: 
-                reward+= 10
+                reward+= 100
         
         #reward for progress through intersection 
-            if val.intersection == 1: 
-                reward+= val.lane_distance
+            # if val.intersection == 1: 
+            #     reward+= val.lane_distance
             
             intersection_reward[key] = reward
 
@@ -500,14 +563,20 @@ TrafficState = namedtuple('TrafficState', possible_states)
 
 agent_intent = {'Agent-1':['merge', 'west'], 'Agent-2': ['merge', 'east'],'Agent-3':['straight', 'south'], 'Agent-4':['straight', 'north']}
 
+agent_start = {'Merging':[ 'edge-east-EW_0', 'edge-west-WE_0'], 'Coop': ['edge-south-SN_0', 'edge-north-NS_0'] }
+
 agent_compliance = {'Agent-1': ['edge-west-WE_1', 'edge-north-SN_0'], 'Agent-2':['edge-east-EW_1', 'edge-south-NS_0'],
-                    'Agent-3': ['edge-south-SN_0', 'edge-north-SN_0'], 'Agent-4':['edge-north-NS_0', 'edge-south-NS_0']}
+                    'Agent-3': ['edge-south-NS_0', 'edge-north-NS_0'], 'Agent-4':['edge-north-SN_0', 'edge-south-SN_0']}
+
+route_compliance = {'Merging': ['edge-east-EW_1','edge-west-WE_1', 'edge-north-SN_0', 'edge-south-NS_0']}
 
 agent_merge_lane = {'Agent-1': 'edge-west-WE_0', 'Agent-2': 'edge-east-EW_0' }
 
 junction_name = ':junction-intersection_11_1'
 
-
+"""
+TODO: Fix the DTSE because it still has bugs which confuses the available action space
+"""
 class TrafficStateEncoder:
     def __init__(self) -> None:
         self.memory = []
@@ -516,17 +585,20 @@ class TrafficStateEncoder:
     def __len__(self): 
         return len(self.memory)
 
+    def reset_state(self):
+        self.memory = list()
+        
+
     def push(self, traffic_state):
 
         self.memory.append(traffic_state)
 
     def update(self, env_obs:Dict[str,Observation]):
         step_traffic_state = {}
-        #TODO: Add collision state (len(collisions) for each agent; different from dead)
-        #TODO: Review State encoder for bugs
+        
         for ids in agent_intent.keys():
-
-            if ids not in env_obs.keys(): 
+ 
+            if env_obs[ids] is None:  #AGENT DIED 
                 step_traffic_state[ids] = TrafficState(0,0,0,0,1,0, None, False)
 
             elif len(env_obs[ids].events.collisions) > 0: # agent has collided

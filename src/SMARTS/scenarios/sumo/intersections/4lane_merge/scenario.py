@@ -24,18 +24,18 @@ ego_missions = [
         via=(Via("edge-west-WE",lane_index=1, lane_offset=70, required_speed=5.0),
              Via("edge-west-WE",lane_index=1, lane_offset=2, required_speed=1.0),
              Via("edge-north-SN",lane_index=0, lane_offset=100, required_speed=10.0)), 
-            start_time=0.01),#Merging + turning agent
+            start_time=0.2),#Merging + turning agent
     Mission(route=Route(begin=("edge-east-EW", 0, 2), end=(("edge-south-NS", 0,'max'))),
             via=(Via("edge-east-EW", lane_index=1, lane_offset=50, required_speed=5.0), 
                  Via("edge-east-EW", lane_index=1, lane_offset=2, required_speed=1.0),
                  Via("edge-south-NS", lane_index=0,lane_offset=100, required_speed=10.0)),
-                 start_time=0.01), #Merging + turning agent
+                 start_time=0.2), #Merging + turning agent
 
     Mission(route=Route(begin=("edge-south-SN", 0, 10), end=(("edge-north-SN", 0,'max'))),
-            start_time=0.01), #Agents going straight
+            start_time=0.2), #Agents going straight
 
     Mission(route=Route(begin=("edge-north-NS", 0, 10), end=(("edge-south-NS", 0,'max'))),
-           start_time=0.01), #Agents going straight
+           start_time=0.2), #Agents going straight
     
 ]
 
