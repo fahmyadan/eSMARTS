@@ -167,7 +167,13 @@ class ObservationWrap(gym.ObservationWrapper):
         # self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in self.mapped_env_obs.items()}
         # risk_dict = {key: risk_obs(val) for key, val in self.mapped_env_obs.items()}
 
-        self.max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items()}
+        # for key, stuff in risk_dict.items():
+
+        #     if len(stuff) ==0:
+        #         print('check ')
+        
+        # print(f'risk dict {risk_dict}')
+        self.max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items() if len(n_risk) !=0}
 
 
         self.traffic_state_encoder.update(self.mapped_env_obs)
@@ -566,7 +572,7 @@ agent_intent = {'Agent-1':['merge', 'west'], 'Agent-2': ['merge', 'east'],'Agent
 agent_start = {'Merging':[ 'edge-east-EW_0', 'edge-west-WE_0'], 'Coop': ['edge-south-SN_0', 'edge-north-NS_0'] }
 
 agent_compliance = {'Agent-1': ['edge-west-WE_1', 'edge-north-SN_0'], 'Agent-2':['edge-east-EW_1', 'edge-south-NS_0'],
-                    'Agent-3': ['edge-south-NS_0', 'edge-north-NS_0'], 'Agent-4':['edge-north-SN_0', 'edge-south-SN_0']}
+                    'Agent-3': ['edge-south-SN_0', 'edge-north-SN_0'], 'Agent-4':['edge-north-NS_0', 'edge-south-NS_0']}
 
 route_compliance = {'Merging': ['edge-east-EW_1','edge-west-WE_1', 'edge-north-SN_0', 'edge-south-NS_0']}
 
@@ -613,6 +619,23 @@ class TrafficStateEncoder:
                 reached_goal = env_obs[ids].events.reached_goal
 
                 if 'junction' in lane_id:
+                    if lane_id == ":junction-intersection_6_0": #Agent 2 junction index
+                        if ids == 'Agent-2':
+                            print('Agent 2 entering junction')
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal)
+                    if lane_id == ":junction-intersection_13_0":#Agent 1 junction index
+                        if ids == 'Agent-1':
+                            print('Agent 1 entering junction')
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal)
+                    if lane_id == ":junction-intersection_8_0": #Agent 3 junction index
+                        if ids == 'Agent-3':
+                            print('Agent 3 entering junction')
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal)
+                    if lane_id == ":junction-intersection_1_0": #Agent 4 junction index
+                        if ids == 'Agent-4':
+                            print('Agent 4 entering junction')
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal)
+                    
                     step_traffic_state[ids] = TrafficState(0,0,0,1,0,0, lane_distance, reached_goal)
                     
 
