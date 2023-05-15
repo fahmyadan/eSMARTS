@@ -88,6 +88,6 @@ class BasicMAC:
         if self.args.obs_last_action:
             input_shape += scheme["actions_onehot"]["vshape"][0]
         if self.args.obs_agent_id:
-            input_shape.append(self.n_agents)
+            input_shape.insert(0,self.n_agents)
 
         return tuple(input_shape)
