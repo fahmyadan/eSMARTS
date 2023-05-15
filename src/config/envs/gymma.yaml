@@ -2,7 +2,7 @@ env: "gymma"
 
 env_args:
   key: null
-  time_limit: 300
+  time_limit: 350
   pretrained_wrapper: null
   visdom: False  
   sumo_headless: False
@@ -18,7 +18,7 @@ env_args:
       agent_type: Laner
       neighbourhood_vehicle_radius: 1000
       accelerometer: True 
-      max_episode_steps: 300  
+      max_episode_steps: 350  
   env_info:
     n_agents: 4
     n_actions: 4
@@ -27,15 +27,15 @@ env_args:
     episode_limit: 1000
     name: intersection_merge
     
-
-buffer_size: 10
+checkpoint_path: ''
+buffer_size: 5
 batch_size: 2
 save_model: False # Save the models to disk
 save_model_interval: 50000
 evaluate: False 
 use_tensorboard: False 
 test_greedy: True
-test_nepisode: 5
+test_nepisode: 2
 test_interval: 50000
 log_interval: 1000
 runner_log_interval: 1000
