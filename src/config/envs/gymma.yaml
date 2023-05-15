@@ -18,13 +18,13 @@ env_args:
       agent_type: Laner
       neighbourhood_vehicle_radius: 1000
       accelerometer: True 
-      max_episode_steps: 300   
+      max_episode_steps: 300  
   env_info:
     n_agents: 4
     n_actions: 4
     n_pixels: 112  #112*112*3
     state_shape: 
-    episode_limit: 10000
+    episode_limit: 1000
     name: intersection_merge
     
 
