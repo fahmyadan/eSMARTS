@@ -42,7 +42,11 @@ class CNNAgent(nn.Module):
         # Process the state through the convolutional layers
         state = input.squeeze(0)
 
-        conv_out = self.conv_layers(state)
+        try :
+            conv_out = self.conv_layers(state)
+        except RuntimeError as e:
+            raise ValueError("Expected tensor of shape (4,3,112,112), but got tensor of shape {}".format(tuple(state.size()))) from e
+
 
         spatial_features = conv_out.view(4,-1)
         # flat_conv = conv_out.flatten()
