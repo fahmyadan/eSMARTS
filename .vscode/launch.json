@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "eSMARTS (ippo)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--config=ippo",
+                "--env-config=gymma",
+                "with",
+                "env_args.key=hiwayenv-v0"
+            ]
+        },
+        {
             "name": "eSMARTS (iql)",
             "type": "python",
             "request": "launch",
