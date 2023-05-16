@@ -436,7 +436,7 @@ class IntersectionEnv(gym.Env):
         
         state = self.state
 
-        print('check id obs ', agent_id, 'state observed ', state.get(agent_id))
+
 
         if state.get(agent_id) is None: 
 
