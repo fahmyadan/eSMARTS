@@ -41,7 +41,7 @@ class ACCritic(nn.Module):
 
     def _get_input_shape(self, scheme):
         # observations
-        input_shape = scheme["obs"]["vshape"]
+        input_shape = list(scheme["obs"]["vshape"])
         # agent id
-        input_shape += self.n_agents
-        return input_shape
+        input_shape.insert(0,self.n_agents)
+        return tuple(input_shape)
