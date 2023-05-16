@@ -452,7 +452,7 @@ class RewardWrapper(gym.RewardWrapper):
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + distance_reward[keys] #+ violation_reward[keys] 
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + distance_reward[keys] + violation_reward[keys] 
             # total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
 
 
@@ -480,9 +480,9 @@ class RewardWrapper(gym.RewardWrapper):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -100
+                violation_reward[key] = -1
             else: 
-                violation_reward[key] = +10 
+                violation_reward[key] = 0 
         return violation_reward
 
     def merging_zone_reward(self, state_enc):

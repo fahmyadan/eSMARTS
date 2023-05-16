@@ -221,6 +221,7 @@ class _GymmaWrapper(MultiAgentEnv):
             valid[-2] = 0# change left invalid
         
         elif traffic_state.dead == 1: 
+            # valid[0] = 0
             valid[1] = 0
             valid[2] = 0
             valid[3] = 0 
