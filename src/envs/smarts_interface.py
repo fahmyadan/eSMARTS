@@ -447,18 +447,19 @@ class RewardWrapper(gym.RewardWrapper):
         # merging_reward = self.merging_zone_reward(latest_traffic_states)
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
         distance_reward = self.distance_reward(latest_traffic_states)
+        timestep_penalty = self.timestep_reward()
         # safety_reward = self.safety_reward(max_rss, ttc)
 
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + distance_reward[keys] + violation_reward[keys] 
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + distance_reward[keys] + violation_reward[keys]  
             # total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
 
 
 
         # Temporary reward
-        total_rewards = sum(total_reward.values())
+        total_rewards = sum(total_reward.values()) + timestep_penalty
         self.step_reward.append(total_rewards)
 
 
@@ -475,12 +476,15 @@ class RewardWrapper(gym.RewardWrapper):
                 compliance_rewards[key] = 0
 
         return compliance_rewards
+    def timestep_reward(self):
 
+        return -1 
+    
     def violation_reward(self, state_enc):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -1
+                violation_reward[key] = -50
             else: 
                 violation_reward[key] = 0 
         return violation_reward
