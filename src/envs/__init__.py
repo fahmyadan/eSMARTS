@@ -214,6 +214,7 @@ class _GymmaWrapper(MultiAgentEnv):
 
         elif traffic_state.vio == 1: 
             valid[0] = 0 # keep_lane invalid
+            valid[1] = 0 #slow_down is invalid
             valid[-1] = 0 #change_right invalid 
 
         elif traffic_state.compliant == 1 :
