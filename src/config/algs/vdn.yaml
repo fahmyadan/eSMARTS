@@ -9,7 +9,7 @@ evaluation_epsilon: 0.0
 
 runner: "episode"
 
-buffer_size: 5000
+buffer_size: 5
 
 # update the target network every {} episodes
 target_update_interval_or_tau: 200
@@ -26,7 +26,7 @@ standardise_rewards: True
 agent_output_type: "q"
 learner: "q_learner"
 double_q: True
-use_rnn: False
+use_rnn: True
 mixer: "vdn"
 
 name: "vdn"
