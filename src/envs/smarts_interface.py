@@ -169,12 +169,6 @@ class ObservationWrap(gym.ObservationWrapper):
         # self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in self.mapped_env_obs.items()}
         # risk_dict = {key: risk_obs(val) for key, val in self.mapped_env_obs.items()}
 
-        # for key, stuff in risk_dict.items():
-
-        #     if len(stuff) ==0:
-        #         print('check ')
-        
-        # print(f'risk dict {risk_dict}')
         self.max_risk = {key: np.array(max(n_risk.values())) for key, n_risk in risk_dict.items() if len(n_risk) !=0}
 
 
