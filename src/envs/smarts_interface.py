@@ -466,8 +466,7 @@ class RewardWrapper(gym.RewardWrapper):
         # Temporary reward
         total_rewards = sum(total_reward.values())
         self.step_reward.append(total_rewards)
-        if total_rewards != 0: 
-            print('check ')
+
 
         return total_rewards
     
@@ -698,7 +697,7 @@ class TrafficStateEncoder:
                 step_traffic_state[ids] = self.check_missing(ids, env_obs.get(ids))
 
         if len(step_traffic_state) != 4:
-            print('check')
+            print('check TSE')
 
         self.push(step_traffic_state)
 
