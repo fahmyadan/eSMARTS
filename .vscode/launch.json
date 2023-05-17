@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "eSMARTS (ippo)",
+            "name": "eSMARTS (vdn)",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--config=ippo",
+                "--config=vdn",
                 "--env-config=gymma",
                 "with",
                 "env_args.key=hiwayenv-v0"
