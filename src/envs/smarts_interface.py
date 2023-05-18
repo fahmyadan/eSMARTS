@@ -510,6 +510,8 @@ class RewardWrapper(gym.RewardWrapper):
                     merge_reward[key] = +50
                 else: 
                     merge_reward[key] = 0
+            else:
+                merge_reward[key] = 0
 
         return merge_reward
 
