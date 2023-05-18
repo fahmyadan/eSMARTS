@@ -39,6 +39,12 @@
     <vehicle id="agent-2" type="car--42389" color="1,0,0" depart="0.00" departLane="0" departPos="0.00" departSpeed="max" arrivalLane="0" arrivalPos="max">
         <route edges="edge-east-EW edge-south-NS"/>
     </vehicle>
+    <vehicle id="agent-3" type="car--42389" color="1,0,0" depart="0.00" departLane="0" departPos="0.00" departSpeed="max" arrivalLane="0" arrivalPos="max">
+        <route edges="edge-south-SN edge-north-SN"/>
+    </vehicle>
+    <vehicle id="agent-4" type="car--42389" color="1,0,0" depart="0.00" departLane="0" departPos="0.00" departSpeed="max" arrivalLane="0" arrivalPos="max">
+        <route edges="edge-north-NS edge-south-NS"/>
+    </vehicle> 
     
     <vehicle id="car-edge-east-EW_1_5-edge-south-NS_0_max--57059--75468-1-0.0" type="car--42389" depart="0.00" departLane="1" departPos="5.00" departSpeed="max" arrivalLane="0" arrivalPos="max">
         <route edges="edge-east-EW edge-south-NS"/>
