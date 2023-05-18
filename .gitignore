@@ -254,3 +254,4 @@ results/
 .vscode/*
 .tb/*
 .venv/*
+.sumo
