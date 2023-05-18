@@ -254,3 +254,6 @@ results/
 .vscode/*
 .tb/*
 .venv/*
+SUMO_GUI/
+src/config/*
+
