@@ -40,29 +40,29 @@ ego_missions = [
 ]
 
 scenario = Scenario(
-    # traffic={
-    #     "Merging_traffic": Traffic(
-    #         flows=[ #Queue for merging 1
-    #             Flow(
-    #                 route=Route(begin=("edge-west-WE", 1, 5), end=("edge-north-SN", 0, "max")),
-    #                 rate=1000,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+    traffic={
+        "Merging_traffic": Traffic(
+            flows=[ #Queue for merging 1
+                Flow(
+                    route=Route(begin=("edge-west-WE", 1, 5), end=("edge-north-SN", 0, "max")),
+                    rate=200,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
 
-    #             #Queue for merging 2
-    #             Flow(
-    #                 route=Route(begin=("edge-east-EW", 1, 5), end=("edge-south-NS", 0, "max")),
-    #                 rate=1000,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+                #Queue for merging 2
+                Flow(
+                    route=Route(begin=("edge-east-EW", 1, 5), end=("edge-south-NS", 0, "max")),
+                    rate=200,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
     
-    #             # Create conflicting Traffic on major roads 
-    #                 #Going straight
-    #             Flow(
-    #                 route=Route(begin=("edge-west-WE", 0, 20), end=("edge-east-WE", 0, "max")),
-    #                 rate=1000,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+                # Create conflicting Traffic on major roads 
+                    #Going straight
+                Flow(
+                    route=Route(begin=("edge-west-WE", 0, 20), end=("edge-east-WE", 0, "max")),
+                    rate=200,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
        
 
     #             Flow(
@@ -71,12 +71,12 @@ scenario = Scenario(
     #                 actors={TrafficActor(name="car"): 1.0},
     #             ),
   
-    #                 #Turning right/left 
-    #             Flow(
-    #                 route=Route(begin=("edge-west-WE", 0, 20), end=("edge-south-NS", 0, "max")),
-    #                 rate=500,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+                    #Turning right/left 
+                Flow(
+                    route=Route(begin=("edge-west-WE", 0, 20), end=("edge-south-NS", 0, "max")),
+                    rate=200,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
     #             Flow(
     #                 route=Route(begin=("edge-east-EW", 0, 20), end=("edge-north-SN", 0, "max")),
     #                 rate=500,
@@ -85,21 +85,21 @@ scenario = Scenario(
                 
     #             #Create conflicting traffic from minor roads (around the CAVs)
 
-    #             Flow(
-    #                 route=Route(begin=("edge-south-SN", 0, 20), end=("edge-north-SN", 0, "max")),
-    #                 rate=500,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+                Flow(
+                    route=Route(begin=("edge-south-SN", 0, 20), end=("edge-north-SN", 0, "max")),
+                    rate=200,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
     #             Flow(
     #                 route=Route(begin=("edge-south-SN", 0, 50), end=("edge-north-SN", 0, "max")),
     #                 rate=500,
     #                 actors={TrafficActor(name="car"): 1.0},
     #             ),
-    #             Flow(
-    #                 route=Route(begin=("edge-north-NS", 0, 20), end=("edge-south-NS", 0, "max")),
-    #                 rate=500,
-    #                 actors={TrafficActor(name="car"): 1.0},
-    #             ),
+                Flow(
+                    route=Route(begin=("edge-north-NS", 0, 20), end=("edge-south-NS", 0, "max")),
+                    rate=500,
+                    actors={TrafficActor(name="car"): 1.0},
+                ),
     #             Flow(
     #                 route=Route(begin=("edge-north-NS", 0, 50), end=("edge-south-NS", 0, "max")),
     #                 rate=500,
@@ -107,10 +107,10 @@ scenario = Scenario(
     #             ),
                 
 
-    #     ]
-    #     ),
+        ]
+        ),
     
-    # },
+    },
     ego_missions=ego_missions,
     # social_agent_missions= social_agent_missions
 )
