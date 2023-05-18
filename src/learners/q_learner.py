@@ -12,6 +12,7 @@ class QLearner:
         self.args = args
         self.mac = mac
         self.logger = logger
+        self.n_agents = args.env_args['env_info']['n_agents']
 
         self.params = list(mac.parameters())
         self.last_target_update_episode = 0
