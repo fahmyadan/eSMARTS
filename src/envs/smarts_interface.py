@@ -58,7 +58,8 @@ class SmartsInterface:
             raise ValueError('Unknown Agent type requested')
 
         self._agent_interface = AgentInterface.from_type(requested_type=req_type,
-                                                    neighborhood_vehicle_states=NeighborhoodVehicles(radius=agent_int_config['neighbourhood_vehicle_radius']), 
+                                                    neighborhood_vehicle_states=NeighborhoodVehicles(radius=agent_int_config['neighbourhood_vehicle_radius']),
+                                                    waypoint_paths=True, 
                                                     max_episode_steps=agent_int_config['max_episode_steps'], top_down_rgb = RGB(width=112, height=112, resolution=50/112) ) 
 
         self.agent_interface = {ids: self._agent_interface for ids in self.agent_ids}
@@ -159,11 +160,17 @@ class ObservationWrap(gym.ObservationWrapper):
         """ 
         risk_dict = {}
         top_rgb = {} 
+    
         for agent, obs in self.mapped_env_obs.items():
             if obs is not None:
                 self.ttc_obs[agent] =  lane_ttc_observation_adapter.transform(obs)
                 risk_dict[agent] = risk_obs(obs)
                 top_rgb[agent] = obs.top_down_rgb.data.transpose(2, 0, 1)
+
+                if len(obs.via_data.hit_via_points)!= 0:
+                    print('hit check')
+
+
 
 
         # self.ttc_obs = {key : lane_ttc_observation_adapter.transform(val) for key, val in self.mapped_env_obs.items()}
@@ -422,9 +429,11 @@ class RewardWrapper(gym.RewardWrapper):
     
         self.env = env
         self.max_risk = self.env.max_risk
+         
     
     def reset(self, **kwargs):
         self.step_reward = []
+   
 
         self._obs = super().reset(**kwargs)
         return self._obs 
@@ -444,21 +453,21 @@ class RewardWrapper(gym.RewardWrapper):
         # compliance_reward = self.compliance_reward(latest_traffic_states)
         collision_reward = self.collision_reward(latest_traffic_states)
         violation_reward = self.violation_reward(latest_traffic_states)
-        # merging_reward = self.merging_zone_reward(latest_traffic_states)
+        merging_reward = self.merging_zone_reward(latest_traffic_states)
         intersection_reward = self.intersection_goal_reward(latest_traffic_states)
         distance_reward = self.distance_reward(latest_traffic_states)
-        timestep_penalty = self.timestep_reward()
+        timestep_penalty =  self.timestep_reward()
         # safety_reward = self.safety_reward(max_rss, ttc)
+        
 
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + distance_reward[keys] + violation_reward[keys]  
-            # total_reward[keys] = compliance_reward[keys] + collision_reward[keys] + violation_reward[keys] + merging_reward[keys] + intersection_reward[keys] + safety_reward[keys]
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + violation_reward[keys] + merging_reward[keys] 
 
 
 
-        # Temporary reward
+
         total_rewards = sum(total_reward.values()) + timestep_penalty
         self.step_reward.append(total_rewards)
 
@@ -484,7 +493,7 @@ class RewardWrapper(gym.RewardWrapper):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -50
+                violation_reward[key] = -100
             else: 
                 violation_reward[key] = 0 
         return violation_reward
@@ -495,11 +504,12 @@ class RewardWrapper(gym.RewardWrapper):
         merge_reward = {}
 
         for key, val in state_enc.items():
-            if val.merging == 1: 
-
-                merge_reward[key] = merge_parabola(val.lane_distance)
-            else: 
-                merge_reward[key] = 0
+            if val.via_point is not None:
+                hit_list = val.via_point
+                if len(hit_list) != 0:
+                    merge_reward[key] = +50
+                else: 
+                    merge_reward[key] = 0
 
         return merge_reward
 
@@ -581,7 +591,7 @@ def merge_parabola(s, a=0.5):
 
 
 
-possible_states = ('merging', 'vio', 'compliant', 'intersection', 'dead', 'collided', 'lane_distance', 'reached_goal', 'distance_travelled') #namedtuple('TrafficState', '')
+possible_states = ('merging', 'vio', 'compliant', 'intersection', 'dead', 'collided', 'lane_distance', 'reached_goal', 'distance_travelled', 'via_point') #namedtuple('TrafficState', '')
 
 TrafficState = namedtuple('TrafficState', possible_states)
 
@@ -625,13 +635,14 @@ class TrafficStateEncoder:
         for ids in agent_intent.keys():
  
             if env_obs[ids] is None:  #AGENT DIED 
-                step_traffic_state[ids] = TrafficState(0,0,0,0,1,0, None, False, None)
+                step_traffic_state[ids] = TrafficState(0,0,0,0,1,0, None, False, None, None)
 
             elif len(env_obs[ids].events.collisions) > 0: # agent has collided
                 lane_distance = env_obs[ids].ego_vehicle_state.lane_position.s
                 reached_goal = env_obs[ids].events.reached_goal
                 distance_travelled = env_obs[ids].distance_travelled
-                step_traffic_state[ids] = TrafficState(0,0,0,0,0,1, lane_distance, reached_goal, distance_travelled)
+                hit_via = env_obs[ids].via_data.hit_via_points
+                step_traffic_state[ids] = TrafficState(0,0,0,0,0,1, lane_distance, reached_goal, distance_travelled, hit_via)
             
             else:
                 lane_id = env_obs[ids].ego_vehicle_state.lane_id
@@ -639,50 +650,52 @@ class TrafficStateEncoder:
                 lane_distance = env_obs[ids].ego_vehicle_state.lane_position.s
                 reached_goal = env_obs[ids].events.reached_goal
                 distance_travelled = env_obs[ids].distance_travelled
+                hit_via = env_obs[ids].via_data.hit_via_points
+                closest_via = self.get_closest_via_distance(env_obs[ids])
 
                 if 'junction' in lane_id:
                     if lane_id == ":junction-intersection_6_0": #Agent 2 junction index
                         if ids == 'Agent-2':
                             print('Agent 2 entering junction')
-                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled)
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled, hit_via)
                     if lane_id == ":junction-intersection_13_0":#Agent 1 junction index
                         if ids == 'Agent-1':
                             print('Agent 1 entering junction')
-                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled)
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled, hit_via)
                     if lane_id == ":junction-intersection_8_0": #Agent 3 junction index
                         if ids == 'Agent-3':
                             print('Agent 3 entering junction')
-                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled)
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal, distance_travelled, hit_via)
                     if lane_id == ":junction-intersection_1_0": #Agent 4 junction index
                         if ids == 'Agent-4':
                             print('Agent 4 entering junction')
-                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal,distance_travelled)
+                            step_traffic_state[ids] = TrafficState(0,0,0,2,0,0, lane_distance, reached_goal,distance_travelled, hit_via)
                     
-                    step_traffic_state[ids] = TrafficState(0,0,0,1,0,0, lane_distance, reached_goal, distance_travelled)
+                    step_traffic_state[ids] = TrafficState(0,0,0,1,0,0, lane_distance, reached_goal, distance_travelled, hit_via)
                     
 
                 if agent_intent[ids][0] == 'merge':
 
                     if lane_id in agent_compliance[ids]: 
-                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal, distance_travelled)
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal, distance_travelled, hit_via)
                         # self.push(0,0,1,0,0) #compliant  
                     elif lane_id in agent_merge_lane[ids]: #in merging lane 
 
                         if lane_distance < merge_length: 
-                            step_traffic_state[ids] = TrafficState(1,0,0,0,0,0, lane_distance,reached_goal,distance_travelled)
+                            step_traffic_state[ids] = TrafficState(1,0,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                             # self.push(1,0,0,0,0)# in merging zone
                         else: 
-                            step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled)
+                            step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                             # self.push(0,1,0,0,0) #violation zone
 
                 elif agent_intent[ids] == 'straight':
                     
                     if lane_id in agent_compliance[ids]:  
-                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled)
+                        step_traffic_state[ids] = TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                         # self.push(0,0,1,0,0) #compliant
 
                     else:
-                        step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled)
+                        step_traffic_state[ids] = TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                         # self.push(0,1,0,0,0) #violation
                 # else:
                 #     step_traffic_state[ids] = TrafficState(0,1,0,0,0,0)
@@ -703,37 +716,61 @@ class TrafficStateEncoder:
 
         if obs is None: 
 
-            return TrafficState(0,0,0,0,1,0,None, False) #dead agent
+            return TrafficState(0,0,0,0,1,0,None, False, None, None ) #dead agent
         elif len(obs.events.collisions) >0:
             lane_distance = obs.ego_vehicle_state.lane_position.s
             reached_goal = obs.events.reached_goal
             distance_travelled = obs.distance_travelled
-            return TrafficState(0,0,0,0,0,1, lane_distance,reached_goal,distance_travelled)
+            hit_via = obs.via_data.hit_via_points
+            return TrafficState(0,0,0,0,0,1, lane_distance,reached_goal,distance_travelled, hit_via)
         else:
             lane_id = obs.ego_vehicle_state.lane_id
             lane_idx = obs.ego_vehicle_state.lane_index
             lane_distance = obs.ego_vehicle_state.lane_position.s
             reached_goal = obs.events.reached_goal
             distance_travelled = obs.distance_travelled
+            hit_via = obs.via_data.hit_via_points
             if 'junction' in lane_id:
-                return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal,distance_travelled)
+                return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
             if agent_intent[ids][0] == 'merge':
                 if lane_id in agent_compliance[ids]: #compliant
-                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled)
+                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                 elif lane_id in agent_merge_lane[ids]: 
                     if lane_distance < merge_length:
-                        return TrafficState(1,0,0,0,0,0, lane_distance,reached_goal,distance_travelled)#merge zone
+                        return TrafficState(1,0,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)#merge zone
                     else:
-                        return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled) #violation zone
+                        return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via) #violation zone
                 else:
-                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled) 
+                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via) 
             elif agent_intent[ids][0] == 'straight':
                 if lane_id in agent_compliance[ids]:
-                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled)
+                    return TrafficState(0,0,1,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
                 elif lane_id not in agent_compliance[ids]:
-                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled) 
+                    return TrafficState(0,1,0,0,0,0, lane_distance,reached_goal,distance_travelled, hit_via) 
                 else:
-                    return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal,distance_travelled)
+                    return TrafficState(0,0,0,1,0,0, lane_distance,reached_goal,distance_travelled, hit_via)
+
+    def get_closest_via_distance(self, env_obs: Observation):
+
+        ego_pose = env_obs.ego_vehicle_state.position
+        ego_heading = env_obs.ego_vehicle_state.heading
+        near_vias = env_obs.via_data.near_via_points
+        closest = [near_vias[0] if len(near_vias) >0 else 0]
+        if len(near_vias)>0 and len(near_vias) <4:
+            print('check')
+
+
+        # env_obs: Observation
+        # assign list of nearest via points 
+        #check if ahead 
+        # calculate distance relative to ego pose of all
+        # return closest via point in front relative to ego  
+        pass
+
+    def calc_tta(self, ego_linear_vel, ego_linear_acc, rel_x, rel_y):
+        #  use smart.core.utils.kinemtics.time_to_cover
+        # return tta_x, tta_y 
+        pass
 
 
 
