@@ -4,12 +4,16 @@
 action_selector: "epsilon_greedy"
 epsilon_start: 1.0
 epsilon_finish: 0.05
-epsilon_anneal_time: 50000
+epsilon_anneal_time: 100000
 evaluation_epsilon: 0.0
 
 runner: "episode"
 
+<<<<<<< Updated upstream
 buffer_size: 5
+=======
+buffer_size: 30
+>>>>>>> Stashed changes
 
 # update the target network every {} episodes
 target_update_interval_or_tau: 200
@@ -18,7 +22,7 @@ target_update_interval_or_tau: 200
 obs_agent_id: True
 obs_last_action: False
 obs_individual_obs: False
-use_rnn: False
+use_rnn: True
 
 # use the Q_Learner to train
 standardise_returns: False
