@@ -210,7 +210,9 @@ class _GymmaWrapper(MultiAgentEnv):
 
         #if no condition is triggered (intersection) all actions are available
         if traffic_state.merging == 1:
-            valid[-1] = 0  #change right is invalid  
+            valid[0] = 0 # keep_lane invalid
+            valid[1] = 0 #slow_down is invalid
+            valid[-1] = 0 #change_right invalid 
 
         elif traffic_state.vio == 1: 
             valid[0] = 0 # keep_lane invalid
