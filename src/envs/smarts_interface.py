@@ -463,12 +463,12 @@ class RewardWrapper(gym.RewardWrapper):
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + violation_reward[keys] + merging_reward[keys] 
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + violation_reward[keys] + merging_reward[keys] + distance_reward[keys]
 
 
 
 
-        total_rewards = sum(total_reward.values()) + timestep_penalty
+        total_rewards = sum(total_reward.values()) 
         self.step_reward.append(total_rewards)
 
 
