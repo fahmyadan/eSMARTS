@@ -758,8 +758,7 @@ class TrafficStateEncoder:
         ego_heading = env_obs.ego_vehicle_state.heading
         near_vias = env_obs.via_data.near_via_points
         closest = [near_vias[0] if len(near_vias) >0 else 0]
-        if len(near_vias)>0 and len(near_vias) <4:
-            print('check')
+    
 
 
         # env_obs: Observation
