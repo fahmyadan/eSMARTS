@@ -450,7 +450,7 @@ class RewardWrapper(gym.RewardWrapper):
         max_rss = self.env.max_risk
         ttc = self.env.ttc_obs
         total_reward = {}
-        # compliance_reward = self.compliance_reward(latest_traffic_states)
+        compliance_reward = self.compliance_reward(latest_traffic_states)
         collision_reward = self.collision_reward(latest_traffic_states)
         violation_reward = self.violation_reward(latest_traffic_states)
         merging_reward = self.merging_zone_reward(latest_traffic_states)
@@ -463,7 +463,7 @@ class RewardWrapper(gym.RewardWrapper):
 
 
         for keys in intersection_reward.keys():
-            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + violation_reward[keys] + merging_reward[keys] + distance_reward[keys]
+            total_reward[keys]  = collision_reward[keys]  + intersection_reward[keys] + violation_reward[keys] + merging_reward[keys]+ distance_reward[keys]
 
 
 
@@ -487,13 +487,13 @@ class RewardWrapper(gym.RewardWrapper):
         return compliance_rewards
     def timestep_reward(self):
 
-        return -1 
+        return -0.1 
     
     def violation_reward(self, state_enc):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -100
+                violation_reward[key] = -1
             else: 
                 violation_reward[key] = 0 
         return violation_reward
@@ -563,13 +563,17 @@ class RewardWrapper(gym.RewardWrapper):
     def distance_reward(self, state_enc):
 
         dist_reward = {}
+        max_distance = 15 * 0.1
 
         for agent, traffic_state in state_enc.items():
             
             if traffic_state.distance_travelled is not None:
                 dist = traffic_state.distance_travelled
 
-                dist_reward[agent] = dist
+                dist_reward[agent] = dist / (1.5*max_distance)
+                if dist_reward[agent] > 1:
+                    print('check')
+                assert dist_reward[agent] < 1
             else:
                 dist_reward[agent] = 0 
         
