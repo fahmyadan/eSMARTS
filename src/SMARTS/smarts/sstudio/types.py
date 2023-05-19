@@ -576,7 +576,7 @@ class Via:
     """The offset along the lane where this via sits"""
     required_speed: float
     """The speed that a vehicle should travel through this via"""
-    hit_distance: float = -2.5
+    hit_distance: float = -3.0
     """The distance at which this waypoint can be hit. Negative means half the lane radius."""
 
 
