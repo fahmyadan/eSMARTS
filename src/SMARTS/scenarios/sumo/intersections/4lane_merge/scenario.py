@@ -21,17 +21,17 @@ from smarts.sstudio.types import (
 ego_missions = [
     Mission(
         route=Route(begin=("edge-west-WE", 0, 2), end=("edge-north-SN", 0, "max")),
-        via=(Via("edge-west-WE",lane_index=1, lane_offset=30, required_speed=10.0),
-             Via("edge-west-WE",lane_index=1, lane_offset=40, required_speed=10.0),
-             Via("edge-west-WE",lane_index=1, lane_offset=50, required_speed=10.0),
-             Via("edge-west-WE",lane_index=1, lane_offset=60, required_speed=10.0),
+        via=(Via("edge-west-WE",lane_index=1, lane_offset=30, required_speed=8.0),
+             Via("edge-west-WE",lane_index=1, lane_offset=40, required_speed=8.0),
+             Via("edge-west-WE",lane_index=1, lane_offset=50, required_speed=8.0),
+             Via("edge-west-WE",lane_index=1, lane_offset=60, required_speed=8.0),
              Via("edge-west-WE",lane_index=1, lane_offset=100, required_speed=5.0)), 
             start_time=0.2),#Merging + turning agent
     Mission(route=Route(begin=("edge-east-EW", 0, 2), end=(("edge-south-NS", 0,'max'))),
-            via=(Via("edge-east-EW", lane_index=1, lane_offset=30, required_speed=10.0), 
-                 Via("edge-east-EW", lane_index=1, lane_offset=40, required_speed=10.0),
-                 Via("edge-east-EW", lane_index=1, lane_offset=50, required_speed=10.0),
-                 Via("edge-east-EW", lane_index=1, lane_offset=60, required_speed=10.0),
+            via=(Via("edge-east-EW", lane_index=1, lane_offset=30, required_speed=8.0), 
+                 Via("edge-east-EW", lane_index=1, lane_offset=40, required_speed=8.0),
+                 Via("edge-east-EW", lane_index=1, lane_offset=50, required_speed=8.0),
+                 Via("edge-east-EW", lane_index=1, lane_offset=60, required_speed=8.0),
                  Via("edge-east-EW", lane_index=0,lane_offset=80, required_speed=5.0)),
                  start_time=0.2), #Merging + turning agent
 
