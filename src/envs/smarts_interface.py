@@ -493,7 +493,7 @@ class RewardWrapper(gym.RewardWrapper):
         violation_reward = {}
         for key, val in state_enc.items():
             if val.vio == 1: 
-                violation_reward[key] = -1
+                violation_reward[key] = -3
             else: 
                 violation_reward[key] = 0 
         return violation_reward
