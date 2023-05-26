@@ -208,30 +208,30 @@ class _GymmaWrapper(MultiAgentEnv):
          """
         valid = flatdim(self._env.action_space[agent_id]) * [1] 
 
-        #if no condition is triggered (intersection) all actions are available
-        if traffic_state.merging == 1:
-            valid[0] = 0 # keep_lane invalid
-            valid[1] = 0 #slow_down is invalid
-            valid[-1] = 0 #change_right invalid 
+        # #if no condition is triggered (intersection) all actions are available
+        # if traffic_state.merging == 1:
+        #     valid[0] = 0 # keep_lane invalid
+        #     valid[1] = 0 #slow_down is invalid
+        #     valid[-1] = 0 #change_right invalid 
 
-        elif traffic_state.vio == 1: 
-            valid[0] = 0 # keep_lane invalid
-            valid[1] = 0 #slow_down is invalid
-            valid[-1] = 0 #change_right invalid 
+        # elif traffic_state.vio == 1: 
+        #     valid[0] = 0 # keep_lane invalid
+        #     valid[1] = 0 #slow_down is invalid
+        #     valid[-1] = 0 #change_right invalid 
 
-        elif traffic_state.compliant == 1 :
-            valid[-1] = 0 #change right is invalid
-            valid[-2] = 0# change left invalid
+        # elif traffic_state.compliant == 1 :
+        #     valid[-1] = 0 #change right is invalid
+        #     valid[-2] = 0# change left invalid
         
-        elif traffic_state.dead == 1: 
-            # valid[0] = 0
-            valid[1] = 0
-            valid[2] = 0
-            valid[3] = 0 
+        # elif traffic_state.dead == 1: 
+        #     # valid[0] = 0
+        #     valid[1] = 0
+        #     valid[2] = 0
+        #     valid[3] = 0 
 
-        elif traffic_state.intersection == 1: 
-            invalid = [0] * (self.longest_action_space.n - len(valid))
-            return valid + invalid
+        # elif traffic_state.intersection == 1: 
+        #     invalid = [0] * (self.longest_action_space.n - len(valid))
+        #     return valid + invalid
         
 
         invalid = [0] * (self.longest_action_space.n - len(valid))
